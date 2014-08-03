@@ -17,10 +17,7 @@ module.exports = function LoopGrid(opts){
 
   var self = ObservStruct({
     chunkIds: ObservArray([]),
-    grid: ObservStuct({
-      data: [],
-      shape: [8, 8]
-    }),
+    grid: Observ(Grid([], shape)),
     active: Observ([])
   })
 
