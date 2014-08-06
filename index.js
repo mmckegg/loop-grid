@@ -72,12 +72,14 @@ module.exports = function LoopGrid(opts){
   }
 
   self.remove = function(chunkId){
-    chunkRelease[newValue.id]()
-    chunkRelease[value.id] = null
-    chunkLookup[value.id] = null
-    var index = self.chunkIds.indexOf(value.id)
-    if (~index){
-      self.chunkIds.splice(index, 1)
+    if (chunkLookup[chunkId]){
+      chunkRelease[chunkId]()
+      chunkRelease[chunkId] = null
+      chunkLookup[chunkId] = null
+      var index = self.chunkIds.indexOf(chunkId)
+      if (~index){
+        self.chunkIds.splice(index, 1)
+      }
     }
   }
 
