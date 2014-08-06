@@ -18,33 +18,36 @@ test('chunks, loops and stuff', function(t){
 
   var drums = Observ({
     id: 'drums',
-    origin: [3,0],
     grid: ArrayGrid(['kick', 'snare', 'hihat', 'openhat'], [4,1], [1,4])
   })
 
   var synth = Observ({
     id: 'synth',
-    origin: [1, 3],
     grid: ArrayGrid(['A1','B1','C2','D2','E2','F2','G2','A2'], [4,4], [1, -4])
   })
 
-  loopGrid.add(drums)
-  loopGrid.add(synth)
+  loopGrid.add(drums, 2, 0)
+  loopGrid.add(synth, 1, 3)
 
   // normally the rest would be on next-tick. Let's force it
   loopGrid.forceRefresh()
 
   var result = loopGrid()
-
-  // sanity check
-  t.equal(result.grid.get(4,0), 'snare')
-  t.equal(result.grid.get(6,0), 'openhat')
+  t.equal(result.grid.get(3,0), 'snare')
+  t.equal(result.grid.get(5,0), 'openhat')
   t.equal(result.grid.get(1,6), 'A1')
   t.equal(result.grid.get(2,6), 'B1')
   t.equal(result.grid.get(3,5), 'G2')
   t.equal(result.grid.get(4,5), 'A2')
 
   t.same(result.chunkIds, ['drums', 'synth'])
+
+  // move the drums one unit to the right
+  loopGrid.setOrigin(drums().id, 3, 0)
+  loopGrid.forceRefresh()
+  var result = loopGrid()
+  t.equal(result.grid.get(4,0), 'snare')
+  t.equal(result.grid.get(6,0), 'openhat')
 
   recorder.write({event: 'start', id: 'kick', position: 0})
   recorder.write({event: 'stop', id: 'kick', position: 0.2})
@@ -171,11 +174,10 @@ test('active', function(t){
 
   var drums = Observ({
     id: 'drums',
-    origin: [3,0],
     grid: ArrayGrid(['kick', 'snare', 'hihat', 'openhat'], [4,1], [1,4])
   })
 
-  loopGrid.add(drums)
+  loopGrid.add(drums, 3, 0)
 
   // normally the rest would be on next-tick. Let's force it
   loopGrid.forceRefresh()

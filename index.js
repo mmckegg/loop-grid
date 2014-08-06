@@ -13,6 +13,7 @@ module.exports = function LoopGrid(opts){
   var shape = opts.shape || [8, 8]
 
   var chunkLookup = {}
+  var originLookup = {}
   var chunkRelease = {}
   var soundLookup = {}
 
@@ -46,17 +47,26 @@ module.exports = function LoopGrid(opts){
     releases = []
   }
 
-  self.add = function(chunk){
+  self.add = function(chunk, originX, originY){
     var value = chunk()
 
     // avoid duplicates
     if (!chunkLookup[chunk.id]){
       chunkLookup[value.id] = chunk
+      if (originX != null && originY != null){
+        originLookup[value.id] = [originX, originY]
+      }
+
+      if (!originLookup){
+        originLookup[value.id] = [0, 0]
+      }
+
       chunkRelease[value.id] = chunk(function(newValue){
         if (newValue.id !== value.id){ 
           // move to new id
           chunkLookup[newValue.id] = chunkLookup[value.id]
           chunkRelease[newValue.id] = chunkRelease[value.id]
+          originLookup[newValue.id] = originLookup[value.id]
           chunkLookup[value.id] = null
           chunkRelease[value.id] = null
           var index = self.chunkIds.indexOf(value.id)
@@ -68,6 +78,13 @@ module.exports = function LoopGrid(opts){
         refreshGrid()
       })
       self.chunkIds.push(value.id)
+    }
+  }
+
+  self.setOrigin = function(chunkId, originX, originY){
+    originLookup[chunkId] = [originX, originY]
+    if (chunkLookup[chunkId]){
+      refreshGrid()
     }
   }
 
@@ -247,8 +264,9 @@ module.exports = function LoopGrid(opts){
     soundLookup = {}
     self.chunkIds.forEach(function(chunkId){
       var chunk = chunkLookup[chunkId] && chunkLookup[chunkId]()
-      if (chunk){
-        result.place(chunk.origin[0], chunk.origin[1], chunk.grid)
+      var origin = originLookup[chunkId]
+      if (chunk && origin){
+        result.place(origin[0], origin[1], chunk.grid)
         for (var i=0;i<chunk.grid.data.length;i++){
           if (chunk.grid.data[i] != null){
             soundLookup[chunk.grid.data[i]] = chunk.id

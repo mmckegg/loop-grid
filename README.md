@@ -29,11 +29,13 @@ var loopGrid = LoopGrid({
 })
 ```
 
-### `loopGrid.add(chunk)`
+### `loopGrid.add(chunk[, originX, originY])`
 
 Add an observable `chunk` such as [soundbank-chunk](https://github.com/mmckegg/soundbank-chunk). If the chunk changes, the mapping will update accordingly.
 
-The chunk needs to confirm to the [observ pattern](https://github.com/raynos/observ) and expose the following attributes: `id`, `origin`, `grid`.
+Specify the position to add the chunk using `originX` and `originY`. You can also use `loopGrid.setOrigin(chunkId, originX, originY)`. Will default to `[0, 0]` if none specified.
+
+The chunk needs to conform to the [observ pattern](https://github.com/raynos/observ) and expose the following attributes: `id`, `grid`.
 
 ```js
 var Chunk = require('soundbank-chunk')
@@ -41,7 +43,6 @@ var drums = Chunk(soundbank, {
   id: 'drums',
   shape: [4, 1], // 4 across, 1 down
   stride: [1, 4],
-  origin: [0, 0], // put it in the top left corner
   slots: [ // the soundbank slots (IDs relative to this chunk)
     {id: 'kick', sources: [{node: 'sample', url: 'kick.wav'}], output: 'post'},
     {id: 'snare', sources: [{node: 'sample', url: 'snare.wav'}], output: 'post'},
@@ -53,12 +54,16 @@ var drums = Chunk(soundbank, {
   outputs: ['post'], // expose outputs to other chunks
 })
 
-loopGrid.add(drums)
+loopGrid.add(drums, 0, 0) // put it in the top-left corner
 ```
 
 ### `loopGrid.remove(id)`
 
 Specify the `id` of a previously added chunk to remove from this grid. This does not affect the chunk or current loop, just removes all mapping from the grid.
+
+### `loopGrid.setOrigin(chunkId, originX, originY)`
+
+Position the chunk matching `chunkId` at the position specified by `originX` and `originY`.
 
 ### `loopGrid.loopRange(start, length)`
 
