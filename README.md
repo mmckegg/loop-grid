@@ -37,7 +37,7 @@ The chunk needs to confirm to the [observ pattern](https://github.com/raynos/obs
 
 ```js
 var Chunk = require('soundbank-chunk')
-var drums = Chunk({
+var drums = Chunk(soundbank, {
   id: 'drums',
   shape: [4, 1], // 4 across, 1 down
   stride: [1, 4],
