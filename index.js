@@ -277,3 +277,7 @@ module.exports = function LoopGrid(opts){
     self.grid.set(result)
   }
 }
+
+function invoke(func){
+  return func()
+}

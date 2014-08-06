@@ -208,6 +208,8 @@ test('active', function(t){
   })
   release()
 
+  loopGrid.destroy()
+
   t.end()
 })
 
