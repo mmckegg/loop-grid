@@ -90,6 +90,10 @@ Flatten the current `transform()` stack and create an undo point.
 
 Get a list of the public IDs of sounds mapped to this grid.
 
+### `loopGrid.forceRefresh`
+
+See [loopGrid.grid](https://github.com/mmckegg/loop-grid#loopgridgrid-observarraygrid).
+
 ### `loopGrid.destroy()`
 
 Clean up any listeners to `recorder` and `player`.
@@ -98,7 +102,7 @@ Clean up any listeners to `recorder` and `player`.
 
 ### `loopGrid.grid` (Observ(ArrayGrid))
 
-An instance of array-grid that maps coordinates to the sound IDs of all chunks. Notifies on any change to chunks.
+An instance of array-grid that maps coordinates to the sound IDs of all chunks. Attemps to batch up changes to `nextTick`. If you need to access the grid in the same tick, call `loopGrid.forceRefresh` first.
 
 ### `loopGrid.chunkIds` (ObservArray)
 

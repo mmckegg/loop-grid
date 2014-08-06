@@ -2,10 +2,12 @@ var Grid = require('array-grid')
 var Observ = require('observ')
 var ObservArray = require('observ-array')
 var ObservStruct = require('observ-struct')
+var nextTick = require('next-tick')
 
 module.exports = function LoopGrid(opts){
   // opts: recorder, player, shape
   
+  var gridRefreshQueued = false
   var player = opts.player
   var recorder = opts.recorder
   var shape = opts.shape || [8, 8]
@@ -146,6 +148,10 @@ module.exports = function LoopGrid(opts){
     }
   }
 
+  self.forceRefresh = function(){
+    refreshGridNow()
+  }
+
   return self
 
 
@@ -226,6 +232,15 @@ module.exports = function LoopGrid(opts){
   }
 
   function refreshGrid(){
+    // batch grid refresh
+    if (!gridRefreshQueued){
+      nextTick(refreshGridNow)
+      gridRefreshQueued = true
+    }
+  }
+
+  function refreshGridNow(){
+    gridRefreshQueued = false
     var result = Grid([], shape)
     soundLookup = {}
     self.chunkIds.forEach(function(chunkId){
@@ -239,7 +254,6 @@ module.exports = function LoopGrid(opts){
         }
       }
     })
-
     self.grid.set(result)
   }
 }

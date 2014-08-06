@@ -31,6 +31,9 @@ test('chunks, loops and stuff', function(t){
   loopGrid.add(drums)
   loopGrid.add(synth)
 
+  // normally the rest would be on next-tick. Let's force it
+  loopGrid.forceRefresh()
+
   var result = loopGrid()
 
   // sanity check
@@ -173,6 +176,9 @@ test('active', function(t){
   })
 
   loopGrid.add(drums)
+
+  // normally the rest would be on next-tick. Let's force it
+  loopGrid.forceRefresh()
 
   var release = loopGrid.active(function(list){
     t.same(list, ['kick'])
