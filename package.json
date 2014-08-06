@@ -1,6 +1,6 @@
 {
   "name": "loop-grid",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Make grid based controllers that trigger events and record loops using soundbank and loop-recorder.",
   "main": "index.js",
   "scripts": {
