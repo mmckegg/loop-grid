@@ -109,6 +109,10 @@ Clean up any listeners to `recorder` and `player`.
 
 An instance of array-grid that maps coordinates to the sound IDs of all chunks. Attemps to batch up changes to `nextTick`. If you need to access the grid in the same tick, call `loopGrid.forceRefresh` first.
 
+### `loopGrid.transforms` (ObservArray)
+
+Updatable / bindable list of active transforms.
+
 ### `loopGrid.chunkIds` (ObservArray)
 
 ### `loopGrid.active` (ObservArray)

@@ -22,7 +22,8 @@ module.exports = function LoopGrid(opts){
   var self = ObservStruct({
     chunkIds: ObservArray([]),
     grid: Observ(Grid([], shape)),
-    active: ObservArray([])
+    active: ObservArray([]),
+    transforms: ObservArray([])
   })
 
   var undos = []
@@ -31,16 +32,20 @@ module.exports = function LoopGrid(opts){
   var baseLoops = {}
   var currentLoops = {}
 
-  var transforms = []
+  releases.push(
 
-  // layout sound ids when chunks change
-  releases.push(self.chunkIds(refreshGrid))
+    // update active sounds
+    watchPlayback(onTrigger),
 
-  // update active sounds
-  player.on('data', onTrigger)
-  releases.push(function(){
-    player.removeListener('data', onTrigger)
-  })
+    // update playback when transforms change
+    self.transforms(function(value){
+      refreshCurrent()
+    },
+
+    // layout sound ids when chunks change
+    self.chunkIds(refreshGrid)
+
+  ))
 
   self.destroy = function(){
     releases.forEach(invoke)
@@ -133,22 +138,26 @@ module.exports = function LoopGrid(opts){
       args: Array.prototype.slice.call(arguments, 1)
     }
 
-    transforms.push(t)
-    refreshCurrent()
+    self.transforms.push(t)
 
     return function release(){
-      var index = transforms.indexOf(t)
+      var index = self.transforms.indexOf(t)
       if (~index){
-        transforms.splice(index, 1)
+        self.transforms.splice(index, 1)
       }
-      refreshCurrent()
     }
+  }
+
+  self.isTransforming = function(){
+    return !!self.transforms.getLength()
   }
 
   self.flatten = function(){
     // flatten transforms
     undos.push(baseLoops)
-    setBase(currentLoops)
+    targetLoops = currentLoops
+    self.transforms.set([])
+    setBase(targetLoops)
   }
 
   self.undo = function(){
@@ -230,7 +239,7 @@ module.exports = function LoopGrid(opts){
   }
 
   function refreshCurrent(){
-    currentLoops = gridTransform(baseLoops, transforms)
+    currentLoops = gridTransform(baseLoops, self.transforms())
     self.getSoundIds().forEach(function(id){
       var channel = currentLoops[id]
       if (channel && channel.events && channel.events.length){
@@ -255,6 +264,13 @@ module.exports = function LoopGrid(opts){
     if (!gridRefreshQueued){
       nextTick(refreshGridNow)
       gridRefreshQueued = true
+    }
+  }
+
+  function watchPlayback(func){
+    player.on('data', func)
+    return function(){
+      player.removeListener('data', func)
     }
   }
 
