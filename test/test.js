@@ -174,7 +174,7 @@ test('active', function(t){
 
   var drums = Observ({
     id: 'drums',
-    grid: ArrayGrid(['kick', 'snare', 'hihat', 'openhat'], [4,1], [1,4])
+    grid: ArrayGrid(['drums#kick', 'drums#snare', 'drums#hihat', 'drums#openhat'], [4,1], [1,4])
   })
 
   loopGrid.add(drums, 3, 0)
@@ -183,28 +183,31 @@ test('active', function(t){
   loopGrid.forceRefresh()
 
   var release = loopGrid.active(function(list){
-    t.same(list, ['kick'])
+    t.same(list, ['drums#kick'])
   })
   player.emit('data', {
-    id: 'kick', event: 'start'
+    id: 'drums#kick', event: 'start'
+  })
+  player.emit('data', {
+    id: 'synth#a1', event: 'start'
   })
   release()
 
   var release = loopGrid.active(function(list){
-    t.same(list._diff, [1, 0, 'snare'])
-    t.same(list, ['kick', 'snare'])
+    t.same(list._diff, [1, 0, 'drums#snare'])
+    t.same(list, ['drums#kick', 'drums#snare'])
   })
-  player.emit('data', {
-    id: 'snare', event: 'start'
+  player.emit('data', { // wildcard!
+    id: 'drums#snare', event: 'start'
   })
   release()
 
   var release = loopGrid.active(function(list){
     t.same(list._diff, [0, 1])
-    t.same(list, ['snare'])
+    t.same(list, ['drums#snare'])
   })
   player.emit('data', {
-    id: 'kick', event: 'end'
+    id: 'drums#kick', event: 'end'
   })
   release()
 
