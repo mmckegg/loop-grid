@@ -7,7 +7,7 @@ Implements [observ](https://github.com/raynos/observ) for easy data-binding to y
 
 For an example of mapping to a midi controller, see [loop-launchpad](https://github.com/mmckegg/loop-launchpad).
 
-## Install via [npm](https://npmjs.org/packages/loop-grid)
+## Install via [npm](https://npmjs.org/package/loop-grid)
 
 ```bash
 $ npm install loop-grid
