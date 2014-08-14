@@ -3,8 +3,9 @@ var Observ = require('observ')
 var ObservArray = require('observ-array')
 var ObservStruct = require('observ-struct')
 var nextTick = require('next-tick')
+var xtend = require('xtend/mutable')
 
-module.exports = function LoopGrid(opts){
+module.exports = function LoopGrid(opts, additionalProperties){
   // opts: recorder, player, shape
   
   var gridRefreshQueued = false
@@ -19,12 +20,12 @@ module.exports = function LoopGrid(opts){
 
   var releases = []
 
-  var self = ObservStruct({
+  var self = ObservStruct(xtend({
     chunkIds: ObservArray([]),
     grid: Observ(Grid([], shape)),
     active: ObservArray([]),
     transforms: ObservArray([])
-  })
+  }, additionalProperties))
 
   var undos = []
   var redos = []
