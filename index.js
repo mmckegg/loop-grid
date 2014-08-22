@@ -23,6 +23,7 @@ module.exports = function LoopGrid(opts, additionalProperties){
   var self = ObservStruct(xtend({
     chunkIds: ObservArray([]),
     grid: Observ(Grid([], shape)),
+    flags: Observ(Grid([], shape)),
     active: ObservArray([]),
     transforms: ObservArray([])
   }, additionalProperties))
@@ -278,12 +279,21 @@ module.exports = function LoopGrid(opts, additionalProperties){
   function refreshGridNow(){
     gridRefreshQueued = false
     var result = Grid([], shape)
+    var flags = Grid([], shape)
     soundLookup = {}
     self.chunkIds.forEach(function(chunkId){
       var chunk = chunkLookup[chunkId] && chunkLookup[chunkId]()
       var origin = originLookup[chunkId]
       if (chunk && origin){
         result.place(origin[0], origin[1], chunk.grid)
+        for (var k in chunk.flags){
+          if (Array.isArray(chunk.flags[k]) && chunk.flags[k].length){
+            var index = result.data.indexOf(k)
+            if (~index){
+              flags.data[index] = chunk.flags[k]
+            }
+          }
+        }
         for (var i=0;i<chunk.grid.data.length;i++){
           if (chunk.grid.data[i] != null){
             soundLookup[chunk.grid.data[i]] = chunk.id
@@ -292,6 +302,7 @@ module.exports = function LoopGrid(opts, additionalProperties){
       }
     })
     self.grid.set(result)
+    self.flags.set(flags)
   }
 }
 
