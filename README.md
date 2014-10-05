@@ -26,6 +26,12 @@ var loopGrid = LoopGrid({
   player: player, // instance of ditty
   recorder: recorder, // instance of loop-recorder
   shape: [8, 8] // width, height
+  chunkLookup: Observ({
+    chunkId: {
+      grid: ArrayGrid([]),
+      flags: {}
+    }
+  })
 })
 ```
 

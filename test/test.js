@@ -4,50 +4,57 @@ var Recorder = require('loop-recorder')
 var Ditty = require('ditty')
 var Observ = require('observ')
 var ArrayGrid = require('array-grid')
+var ObservVarhash = require('observ-varhash')
 
 test('chunks, loops and stuff', function(t){
 
   var player = Ditty()
   var recorder = Recorder()
+  var chunkLookup = ObservVarhash({
+    drums: Observ({
+      id: 'drums',
+      grid: ArrayGrid(['kick', 'snare', 'hihat', 'openhat'], [4,1], [1,4])
+    }),
+    synth: Observ({
+      id: 'synth',
+      grid: ArrayGrid(['A1','B1','C2','D2','E2','F2','G2','A2'], [4,4], [1, -4])
+    })
+  })
 
   var loopGrid = LoopGrid({
     shape: [8, 8],
     recorder: recorder,
-    player: player
+    player: player,
+    chunkLookup: chunkLookup
   })
 
-  var drums = Observ({
-    id: 'drums',
-    grid: ArrayGrid(['kick', 'snare', 'hihat', 'openhat'], [4,1], [1,4])
+  loopGrid.set({
+    chunkPositions: {
+      drums: [2,0],
+      synth: [1,3]
+    }
   })
 
-  var synth = Observ({
-    id: 'synth',
-    grid: ArrayGrid(['A1','B1','C2','D2','E2','F2','G2','A2'], [4,4], [1, -4])
-  })
-
-  loopGrid.add(drums, 2, 0)
-  loopGrid.add(synth, 1, 3)
 
   // normally the rest would be on next-tick. Let's force it
-  loopGrid.forceRefresh()
+  //loopGrid.forceRefresh()
 
-  var result = loopGrid()
-  t.equal(result.grid.get(3,0), 'snare')
-  t.equal(result.grid.get(5,0), 'openhat')
-  t.equal(result.grid.get(1,6), 'A1')
-  t.equal(result.grid.get(2,6), 'B1')
-  t.equal(result.grid.get(3,5), 'G2')
-  t.equal(result.grid.get(4,5), 'A2')
+  console.log(chunkLookup())
 
-  t.same(result.chunkIds, ['drums', 'synth'])
+  var result = loopGrid.grid()
+  t.equal(result.get(3,0), 'snare')
+  t.equal(result.get(5,0), 'openhat')
+  t.equal(result.get(1,6), 'A1')
+  t.equal(result.get(2,6), 'B1')
+  t.equal(result.get(3,5), 'G2')
+  t.equal(result.get(4,5), 'A2')
 
   // move the drums one unit to the right
-  loopGrid.setOrigin(drums().id, 3, 0)
-  loopGrid.forceRefresh()
-  var result = loopGrid()
-  t.equal(result.grid.get(4,0), 'snare')
-  t.equal(result.grid.get(6,0), 'openhat')
+  loopGrid.chunkPositions.put('drums', [3,0])
+  //loopGrid.forceRefresh()
+  var result = loopGrid.grid()
+  t.equal(result.get(4,0), 'snare')
+  t.equal(result.get(6,0), 'openhat')
 
   recorder.write({event: 'start', id: 'kick', position: 0})
   recorder.write({event: 'stop', id: 'kick', position: 0.2})
@@ -161,59 +168,3 @@ test('chunks, loops and stuff', function(t){
 
   t.end()
 })
-
-test('active', function(t){
-  t.plan(3)
-
-  var player = Ditty()
-
-  var loopGrid = LoopGrid({
-    shape: [8, 8],
-    player: player
-  })
-
-  var drums = Observ({
-    id: 'drums',
-    grid: ArrayGrid(['drums#kick', 'drums#snare', 'drums#hihat', 'drums#openhat'], [4,1], [1,4])
-  })
-
-  loopGrid.add(drums, 3, 0)
-
-  // normally the rest would be on next-tick. Let's force it
-  loopGrid.forceRefresh()
-
-  var release = loopGrid.active(function(list){
-    t.same(list, ['drums#kick'])
-  })
-  player.emit('data', {
-    id: 'drums#kick', event: 'start'
-  })
-  player.emit('data', {
-    id: 'synth#a1', event: 'start'
-  })
-  release()
-
-  var release = loopGrid.active(function(list){
-    t.same(list._diff, [1, 0, 'drums#snare'])
-    t.same(list, ['drums#kick', 'drums#snare'])
-  })
-  player.emit('data', { // wildcard!
-    id: 'drums#snare', event: 'start'
-  })
-  release()
-
-  var release = loopGrid.active(function(list){
-    t.same(list._diff, [0, 1])
-    t.same(list, ['drums#snare'])
-  })
-  player.emit('data', {
-    id: 'drums#kick', event: 'end'
-  })
-  release()
-
-  loopGrid.destroy()
-
-  t.end()
-})
-
-// active sounds
