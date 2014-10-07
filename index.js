@@ -40,32 +40,34 @@ function LoopGrid(opts, additionalProperties){
   obs.triggerIds = Observ([])
 
   obs.grid = computed([obs.chunkPositions, opts.chunkLookup], function(chunkPositions, chunkLookup){
-    gridRefreshQueued = false
     var result = Grid([], shape)
     var flags = Grid([], shape)
     var triggerIds = []
-    soundChunkLookup = {}
-    Object.keys(chunkPositions).forEach(function(chunkId){
-      var chunk = chunkLookup[chunkId]
-      var origin = chunkPositions[chunkId]
-      if (chunk && origin){
-        result.place(origin[0], origin[1], chunk.grid)
-        for (var k in chunk.flags){
-          if (Array.isArray(chunk.flags[k]) && chunk.flags[k].length){
-            var index = result.data.indexOf(k)
-            if (~index){
-              flags.data[index] = chunk.flags[k]
+
+    if (chunkPositions){
+      soundChunkLookup = {}
+      Object.keys(chunkPositions).forEach(function(chunkId){
+        var chunk = chunkLookup[chunkId]
+        var origin = chunkPositions[chunkId]
+        if (chunk && origin){
+          result.place(origin[0], origin[1], chunk.grid)
+          for (var k in chunk.flags){
+            if (Array.isArray(chunk.flags[k]) && chunk.flags[k].length){
+              var index = result.data.indexOf(k)
+              if (~index){
+                flags.data[index] = chunk.flags[k]
+              }
+            }
+          }
+          for (var i=0;i<chunk.grid.data.length;i++){
+            if (chunk.grid.data[i] != null){
+              triggerIds.push(chunk.grid.data[i])
+              soundChunkLookup[chunk.grid.data[i]] = chunk.id
             }
           }
         }
-        for (var i=0;i<chunk.grid.data.length;i++){
-          if (chunk.grid.data[i] != null){
-            triggerIds.push(chunk.grid.data[i])
-            soundChunkLookup[chunk.grid.data[i]] = chunk.id
-          }
-        }
-      }
-    })
+      })
+    }
 
     obs.flags.set(flags)
     obs.triggerIds.set(triggerIds)
@@ -202,4 +204,8 @@ function LoopGrid(opts, additionalProperties){
     })
     refreshCurrent()
   }
+}
+
+function invoke(fn){
+  return fn()
 }
