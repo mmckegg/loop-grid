@@ -35,13 +35,8 @@ var loopGrid = LoopGrid({
 })
 ```
 
-### `loopGrid.add(chunk[, originX, originY])`
+### `loopGrid.set(descriptor)`
 
-Add an observable `chunk` such as [soundbank-chunk](https://github.com/mmckegg/soundbank-chunk). If the chunk changes, the mapping will update accordingly.
-
-Specify the position to add the chunk using `originX` and `originY`. You can also use `loopGrid.setOrigin(chunkId, originX, originY)`. Will default to `[0, 0]` if none specified.
-
-The chunk needs to conform to the [observ pattern](https://github.com/raynos/observ) and expose the following attributes: `id`, `grid`.
 
 ```js
 var Chunk = require('soundbank-chunk')
@@ -56,7 +51,7 @@ var drums = Chunk(soundbank, {
     {id: 'openhat', sources: [{node: 'sample', url: 'openhat.wav'}], output: 'post'},
     {id: 'post', processors: [{node: 'overdrive'}]}
   ],
-  sounds: ['kick', 'snare', 'hihat', 'openhat'], // what to put on grid
+  triggers: ['kick', 'snare', 'hihat', 'openhat'], // what to put on grid
   outputs: ['post'], // expose outputs to other chunks
 })
 

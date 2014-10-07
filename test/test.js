@@ -39,8 +39,6 @@ test('chunks, loops and stuff', function(t){
   // normally the rest would be on next-tick. Let's force it
   //loopGrid.forceRefresh()
 
-  console.log(chunkLookup())
-
   var result = loopGrid.grid()
   t.equal(result.get(3,0), 'snare')
   t.equal(result.get(5,0), 'openhat')
