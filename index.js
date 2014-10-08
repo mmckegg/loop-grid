@@ -6,6 +6,8 @@ var ObservArray = require('observ-array')
 var xtend = require('xtend/mutable')
 var computed = require('observ/computed')
 
+var ObservDittyGrid = require('./lib/ditty-grid.js')
+
 module.exports = LoopGrid
 
 function LoopGrid(opts, additionalProperties){
@@ -75,7 +77,14 @@ function LoopGrid(opts, additionalProperties){
     return result
   })
 
+  if (opts.triggerOutput){
+    obs.playing = ObservDittyGrid(opts.triggerOutput, obs.grid)
+  }
+
   obs.destroy = function(){
+    if (obs.playing){
+      obs.playing.destroy()
+    }
     releases.forEach(invoke)
     releases = []
   }
