@@ -7,6 +7,7 @@ var xtend = require('xtend/mutable')
 var computed = require('observ/computed')
 
 var ObservDittyGrid = require('./lib/ditty-grid.js')
+var ObservActiveGrid = require('./lib/active-grid.js')
 
 module.exports = LoopGrid
 
@@ -38,6 +39,7 @@ function LoopGrid(opts, additionalProperties){
 
   )
 
+  obs.chunkState = Observ([])
   obs.flags = Observ({})
   obs.triggerIds = Observ([])
 
@@ -45,6 +47,7 @@ function LoopGrid(opts, additionalProperties){
     var result = Grid([], shape)
     var flags = Grid([], shape)
     var triggerIds = []
+    var chunkState = []
 
     if (chunkPositions){
       soundChunkLookup = {}
@@ -52,6 +55,14 @@ function LoopGrid(opts, additionalProperties){
         var chunk = chunkLookup[chunkId]
         var origin = chunkPositions[chunkId]
         if (chunk && origin){
+          chunkState.push({
+            id: chunkId, 
+            origin: origin, 
+            shape: chunk.grid.shape, 
+            stride: chunk.grid.stride, 
+            node: chunk.node,
+            color: chunk.color
+          })
           result.place(origin[0], origin[1], chunk.grid)
           for (var k in chunk.flags){
             if (Array.isArray(chunk.flags[k]) && chunk.flags[k].length){
@@ -71,6 +82,7 @@ function LoopGrid(opts, additionalProperties){
       })
     }
 
+    obs.chunkState.set(chunkState)
     obs.flags.set(flags)
     obs.triggerIds.set(triggerIds)
 
@@ -81,10 +93,13 @@ function LoopGrid(opts, additionalProperties){
     obs.playing = ObservDittyGrid(opts.triggerOutput, obs.grid)
   }
 
+  if (opts.player){
+    obs.active = ObservActiveGrid(opts.player, obs.grid)
+  }
+
   obs.destroy = function(){
-    if (obs.playing){
-      obs.playing.destroy()
-    }
+    if (obs.playing) obs.playing.destroy()
+    if (obs.active) obs.active.destroy()
     releases.forEach(invoke)
     releases = []
   }
