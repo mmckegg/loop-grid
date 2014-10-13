@@ -30,7 +30,7 @@ function LoopGrid(opts, additionalProperties){
 
   var baseLoops = {}
   var currentLoops = {}
-  var releases = []
+  var releases = obs._releases = []
 
   releases.push(
 
