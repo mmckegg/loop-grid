@@ -6,8 +6,10 @@ var ObservArray = require('observ-array')
 var xtend = require('xtend/mutable')
 var computed = require('observ/computed')
 
-var ObservDittyGrid = require('./lib/ditty-grid.js')
-var ObservActiveGrid = require('./lib/active-grid.js')
+var computedDittyGrid = require('./lib/ditty-grid.js')
+var computedActiveGrid = require('./lib/active-grid.js')
+var computedLoopPosition = require('./lib/loop-position.js')
+var computedRecording = require('./lib/recording.js')
 
 module.exports = LoopGrid
 
@@ -42,6 +44,8 @@ function LoopGrid(opts, additionalProperties){
   obs.chunkState = Observ([])
   obs.flags = Observ({})
   obs.triggerIds = Observ([])
+  obs.loopLength = Observ(8)
+
 
   obs.grid = computed([obs.chunkPositions, opts.chunkLookup], function(chunkPositions, chunkLookup){
     var result = Grid([], shape)
@@ -90,23 +94,38 @@ function LoopGrid(opts, additionalProperties){
   })
 
   if (opts.triggerOutput){
-    obs.playing = ObservDittyGrid(opts.triggerOutput, obs.grid)
+    obs.playing = computedDittyGrid(opts.triggerOutput, obs.grid)
   }
 
   if (opts.player){
-    obs.active = ObservActiveGrid(opts.player, obs.grid)
+    obs.active = computedActiveGrid(opts.player, obs.grid)
+  }
+
+  if (opts.scheduler){
+    obs.loopPosition = computedLoopPosition(opts.scheduler, obs.loopLength)
+  }
+
+  if (opts.scheduler && opts.triggerOutput){
+    obs.recording = computedRecording(opts.scheduler, opts.triggerOutput, obs.grid, obs.loopLength)
   }
 
   obs.destroy = function(){
     if (obs.playing) obs.playing.destroy()
     if (obs.active) obs.active.destroy()
+    if (obs.loopPosition) obs.loopPosition.destroy()
+    if (obs.recording) obs.recording.destroy()
     releases.forEach(invoke)
     releases = []
   }
 
-
   // grab loops from recorder for all sounds currently in grid and set loop
-  obs.loopRange = function(start, length){
+  obs.store = function(length, start){
+
+    // defaults
+    length = length || obs.loopLength()
+    start = start == null && opts.scheduler ? 
+      opts.scheduler.getCurrentPosition() - length : start
+
     undos.push(baseLoops)
 
     var snapshot = obs.triggerIds().reduce(function(result, id){
