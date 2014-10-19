@@ -75,10 +75,6 @@ Flatten the current `transform()` stack and create an undo point.
 
 ### `loopGrid.redo()`
 
-### `loopGrid.forceRefresh`
-
-See [loopGrid.grid](https://github.com/mmckegg/loop-grid#loopgridgrid-observarraygrid).
-
 ### `loopGrid.destroy()`
 
 Clean up any listeners to `recorder` and `player`.
