@@ -45,17 +45,9 @@ var loopGrid = LoopGrid({
 
 Returns an extended instance of [ObservStruct](https://github.com/raynos/observ-struct).
 
-### `loopGrid()`
-
-Returns dehydrated persistable JSON object (from [ObservStruct](https://github.com/raynos/observ-struct)).
-
-```js
-fs.write('grid.json', JSON.stringify(loopGrid()))
-```
-
 ### `loopGrid.store([length, start])`
 
-`length defaults to `obs.loopLength()`.
+`length` defaults to `obs.loopLength()`.
 `start` defaults to `scheduler.getCurrentPosition() - length`.
 
 This calls `recorder.getLoop` for every ID currently mapped to this grid and then calls `player.set` for each result. It also creates an `undo()` point.
