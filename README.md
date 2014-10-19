@@ -19,54 +19,44 @@ $ npm install loop-grid
 var LoopGrid = require('loop-grid')
 ```
 
-### `LoopGrid(opts)`
+### `LoopGrid(opts, additionalProps)`
 
 ```js
 var loopGrid = LoopGrid({
+
   player: player, // instance of ditty
   recorder: recorder, // instance of loop-recorder
-  shape: [8, 8] // width, height
+
+  scheduler: scheduler, // instance of bopper
+  triggerOutput: scheduler, // stream of trigger events (e.g. soundbank-trigger)
+
+  shape: [8, 8], // width, height
+
+  // 
   chunkLookup: Observ({
     chunkId: {
-      grid: ArrayGrid([]),
+      grid: ArrayGrid([]), // grid mapped IDs
       flags: {}
     }
   })
-})
+
+}, additionalProps)
 ```
 
-### `loopGrid.set(descriptor)`
+Returns an extended instance of [ObservStruct](https://github.com/raynos/observ-struct).
 
+### `loopGrid()`
+
+Returns dehydrated persistable JSON object (from [ObservStruct](https://github.com/raynos/observ-struct)).
 
 ```js
-var Chunk = require('soundbank-chunk')
-var drums = Chunk(soundbank, {
-  id: 'drums',
-  shape: [4, 1], // 4 across, 1 down
-  stride: [1, 4],
-  slots: [ // the soundbank slots (IDs relative to this chunk)
-    {id: 'kick', sources: [{node: 'sample', url: 'kick.wav'}], output: 'post'},
-    {id: 'snare', sources: [{node: 'sample', url: 'snare.wav'}], output: 'post'},
-    {id: 'hihat', sources: [{node: 'sample', url: 'hihat.wav'}], output: 'post'},
-    {id: 'openhat', sources: [{node: 'sample', url: 'openhat.wav'}], output: 'post'},
-    {id: 'post', processors: [{node: 'overdrive'}]}
-  ],
-  triggers: ['kick', 'snare', 'hihat', 'openhat'], // what to put on grid
-  outputs: ['post'], // expose outputs to other chunks
-})
-
-loopGrid.add(drums, 0, 0) // put it in the top-left corner
+fs.write('grid.json', JSON.stringify(loopGrid()))
 ```
 
-### `loopGrid.remove(id)`
+### `loopGrid.store([length, start])`
 
-Specify the `id` of a previously added chunk to remove from this grid. This does not affect the chunk or current loop, just removes all mapping from the grid.
-
-### `loopGrid.setOrigin(chunkId, originX, originY)`
-
-Position the chunk matching `chunkId` at the position specified by `originX` and `originY`.
-
-### `loopGrid.loopRange(start, length)`
+`length defaults to `obs.loopLength()`.
+`start` defaults to `scheduler.getCurrentPosition() - length`.
 
 This calls `recorder.getLoop` for every ID currently mapped to this grid and then calls `player.set` for each result. It also creates an `undo()` point.
 
@@ -92,10 +82,6 @@ Flatten the current `transform()` stack and create an undo point.
 
 ### `loopGrid.redo()`
 
-### `loopGrid.getSoundIds()`
-
-Get a list of the public IDs of sounds mapped to this grid.
-
 ### `loopGrid.forceRefresh`
 
 See [loopGrid.grid](https://github.com/mmckegg/loop-grid#loopgridgrid-observarraygrid).
@@ -104,24 +90,57 @@ See [loopGrid.grid](https://github.com/mmckegg/loop-grid#loopgridgrid-observarra
 
 Clean up any listeners to `recorder` and `player`.
 
-## Observable Properties
+## Attributes
 
-### `loopGrid.grid` (Observ(ArrayGrid))
+### `loopGrid` (ObservStruct)
 
-An instance of array-grid that maps coordinates to the sound IDs of all chunks. Attemps to batch up changes to `nextTick`. If you need to access the grid in the same tick, call `loopGrid.forceRefresh` first.
+Dehydrate (persist):
+
+```js
+fs.write('grid.json', JSON.stringify(loopGrid()))
+```
+
+Re-hydrate (restore):
+
+```js
+var data = JSON.parse(fs.readFileSync('grid.json', 'utf8'))
+loopGrid.set(data)
+```
 
 ### `loopGrid.transforms` (ObservArray)
 
 Updatable / bindable list of active transforms.
 
-### `loopGrid.chunkIds` (ObservArray)
+### `loopGrid.chunkPositions` (ObservVarhash)
 
-### `loopGrid.active` (ObservArray)
+Map chunks (from opts.chunkLookup) to grid positions at specified origin.
 
-List of sound IDs currently being triggered by player. Notifies on every change.
+### `loopGrid.loopLength` (Observ)
 
 ```js
-loopGrid.active(function(ids){
-  // called every time the active items change
-  // use ids._diff to find out what changed for partial updates
-})
+loopGrid.chunkPositions.put('drums', [0,0])
+```
+
+## Computed Observables (read-only)
+
+### `loopGrid.grid` (Observ(ArrayGrid))
+
+An instance of array-grid that maps coordinates to the sound IDs of all chunks. Attemps to batch up changes to `nextTick`. If you need to access the grid in the same tick, call `loopGrid.forceRefresh` first.
+
+### `loopGrid.active` (Observ(ArrayGrid))
+
+Observable ArrayGrid containing true values where coords in current loop
+
+### `loopGrid.playing` (Observ(ArrayGrid))
+
+Observable ArrayGrid containing true values where coords is currently being triggered.
+
+### `loopGrid.recording` (Observ(ArrayGrid))
+
+Observable ArrayGrid containing true values where coords has played within range of `loopLength`.
+
+### `loopGrid.loopPosition` (Observ)
+
+### `loopGrid.triggerIds` (Observ)
+
+Get a list of the public IDs of sounds mapped to this grid.
