@@ -47,7 +47,8 @@ Returns an extended instance of [ObservStruct](https://github.com/raynos/observ-
 
 ### `loopGrid.store([length, start])`
 
-`length` defaults to `obs.loopLength()`.
+`length` defaults to `loopGrid.loopLength()`.
+
 `start` defaults to `scheduler.getCurrentPosition() - length`.
 
 This calls `recorder.getLoop` for every ID currently mapped to this grid and then calls `player.set` for each result. It also creates an `undo()` point.
