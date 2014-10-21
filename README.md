@@ -133,3 +133,33 @@ Observable ArrayGrid containing true values where coords has played within range
 ### `loopGrid.triggerIds` (Observ)
 
 Get a list of the public IDs of sounds mapped to this grid.
+
+### `loopGrid.gridState` (Observ)
+
+Example output:
+
+```js
+{
+  grid: ArrayGrid([
+    { id: 'drums#0', 
+      isRecording: true, 
+      isPlaying: false, 
+      isActive: false 
+    },
+    { id: 'drums#0', 
+      isRecording: true, 
+      isPlaying: false, 
+      isActive: false 
+    }
+  ], [8,8]),
+  chunks: [
+    {
+      id: 'drums', 
+      origin: [0,0], 
+      shape: [1,4], 
+      node: {..},
+      color: [255, 100, 123]
+    }
+  ]
+}
+```
