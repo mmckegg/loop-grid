@@ -15,9 +15,16 @@ module.exports = LoopGrid
 
 function LoopGrid(opts, additionalProperties){
  
-  var recorder = opts.recorder
+  // required options:
   var player = opts.player
+  var recorder = opts.recorder
+
+  // optional:
   var shape = opts.shape || [8,8]
+  var scheduler = opts.scheduler || null
+  var triggerOutput = opts.triggerOutput || null
+
+
 
   var obs = ObservStruct(xtend({
     chunkPositions: ObservVarhash({})
@@ -93,20 +100,20 @@ function LoopGrid(opts, additionalProperties){
     return result
   })
 
-  if (opts.triggerOutput){
-    obs.playing = computedDittyGrid(opts.triggerOutput, obs.grid)
+  if (triggerOutput){
+    obs.playing = computedDittyGrid(triggerOutput, obs.grid)
   }
 
-  if (opts.player){
-    obs.active = computedActiveGrid(opts.player, obs.grid)
+  if (player){
+    obs.active = computedActiveGrid(player, obs.grid)
   }
 
-  if (opts.scheduler){
-    obs.loopPosition = computedLoopPosition(opts.scheduler, obs.loopLength)
+  if (scheduler){
+    obs.loopPosition = computedLoopPosition(scheduler, obs.loopLength)
   }
 
-  if (opts.scheduler && opts.triggerOutput){
-    obs.recording = computedRecording(opts.scheduler, opts.triggerOutput, obs.grid, obs.loopLength)
+  if (scheduler && triggerOutput){
+    obs.recording = computedRecording(scheduler, triggerOutput, obs.grid, obs.loopLength)
   }
 
   obs.destroy = function(){
