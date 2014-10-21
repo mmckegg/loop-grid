@@ -116,6 +116,32 @@ function LoopGrid(opts, additionalProperties){
     obs.recording = computedRecording(scheduler, triggerOutput, obs.grid, obs.loopLength)
   }
 
+  if (obs.playing && obs.active && obs.recording){
+
+    // for binding to grid visual interface
+    obs.gridState = computed([
+      obs.grid, obs.playing, obs.active, obs.recording
+    ], function(grid, playing, active, recording){
+      var length = grid.data.length
+      var result = []
+      for (var i=0;i<length;i++){
+        if (grid.data[i]){
+          result[i] = {
+            id: grid.data[i],
+            isPlaying: playing.data[i],
+            isActive: active.data[i],
+            isRecording: recording.data[i]
+          }
+        }
+      }
+      return {
+        grid: Grid(result, grid.shape, grid.stride),
+        chunks: obs.chunkState()
+      }
+    })
+
+  }
+
   obs.destroy = function(){
     if (obs.playing) obs.playing.destroy()
     if (obs.active) obs.active.destroy()
