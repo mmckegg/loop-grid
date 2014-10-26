@@ -27,6 +27,7 @@ function LoopGrid(opts, additionalProperties){
 
 
   var obs = ObservStruct(xtend({
+    node: Observ(), // this is useful for loop-drop-setup :)
     chunkPositions: ObservVarhash({})
   }, additionalProperties))
 
