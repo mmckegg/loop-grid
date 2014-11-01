@@ -121,8 +121,8 @@ function LoopGrid(opts, additionalProperties){
 
     // for binding to grid visual interface
     obs.gridState = computed([
-      obs.grid, obs.playing, obs.active, obs.recording
-    ], function(grid, playing, active, recording){
+      obs.grid, obs.playing, obs.active, obs.recording, obs.loopPosition, obs.loopLength
+    ], function(grid, playing, active, recording, loopPosition, loopLength){
       var length = grid.data.length
       var result = []
       for (var i=0;i<length;i++){
@@ -135,10 +135,14 @@ function LoopGrid(opts, additionalProperties){
           }
         }
       }
+
       return {
+        loopPosition: loopPosition,
+        loopLength: loopLength,
         grid: Grid(result, grid.shape, grid.stride),
         chunks: obs.chunkState()
       }
+      
     })
 
   }
