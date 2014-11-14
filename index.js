@@ -54,7 +54,6 @@ function LoopGrid(opts, additionalProperties){
   obs.triggerIds = Observ([])
   obs.loopLength = Observ(8)
 
-
   obs.grid = computed([obs.chunkPositions, opts.chunkLookup], function(chunkPositions, chunkLookup){
     var result = Grid([], shape)
     var flags = Grid([], shape)
@@ -86,7 +85,9 @@ function LoopGrid(opts, additionalProperties){
           }
           for (var i=0;i<chunk.grid.data.length;i++){
             if (chunk.grid.data[i] != null){
-              triggerIds.push(chunk.grid.data[i])
+              if (!chunk.usedSlots || ~chunk.usedSlots.indexOf(i)){
+                triggerIds.push(chunk.grid.data[i])
+              }
               soundChunkLookup[chunk.grid.data[i]] = chunk.id
             }
           }
@@ -121,8 +122,8 @@ function LoopGrid(opts, additionalProperties){
 
     // for binding to grid visual interface
     obs.gridState = computed([
-      obs.grid, obs.playing, obs.active, obs.recording, obs.loopPosition, obs.loopLength
-    ], function(grid, playing, active, recording, loopPosition, loopLength){
+      obs.grid, obs.playing, obs.active, obs.recording, obs.loopPosition, obs.loopLength, obs.triggerIds
+    ], function(grid, playing, active, recording, loopPosition, loopLength, triggerIds){
       var length = grid.data.length
       var result = []
       for (var i=0;i<length;i++){
@@ -131,7 +132,8 @@ function LoopGrid(opts, additionalProperties){
             id: grid.data[i],
             isPlaying: playing.data[i],
             isActive: active.data[i],
-            isRecording: recording.data[i]
+            isRecording: recording.data[i],
+            isTrigger: !!~triggerIds.indexOf(grid.data[i])
           }
         }
       }
