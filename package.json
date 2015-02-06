@@ -1,6 +1,6 @@
 {
   "name": "loop-grid",
-  "version": "3.3.1",
+  "version": "4.0.0",
   "description": "An observable collection of looped event sequences shaped to a grid.",
   "main": "index.js",
   "scripts": {
