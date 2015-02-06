@@ -1,294 +1,236 @@
-var ObservStruct = require('observ-struct')
-var Grid = require('array-grid')
-var Observ = require('observ')
-var ObservVarhash = require('observ-varhash')
-var ObservArray = require('observ-array')
-var xtend = require('xtend/mutable')
-var computed = require('observ/computed')
+var ArrayGrid = require('array-grid')
 
-var computedDittyGrid = require('./lib/ditty-grid.js')
-var computedActiveGrid = require('./lib/active-grid.js')
-var computedLoopPosition = require('./lib/loop-position.js')
-var computedRecording = require('./lib/recording.js')
+var Observ = require('observ')
+var ObservStruct = require('observ-struct')
+var Event = require('geval')
+
+var computed = require('observ/computed')
+var nextTick = require('next-tick')
+
+var NO_TRANSACTION = {}
 
 module.exports = LoopGrid
 
-function LoopGrid(opts, additionalProperties){
- 
-  // required options:
-  var player = opts.player
-  var recorder = opts.recorder
+function LoopGrid(context){
 
-  // optional:
-  var shape = opts.shape || [8,8]
-  var scheduler = opts.scheduler || null
-  var triggerOutput = opts.triggerOutput || null
+  // required context: scheduler (instance of Bopper), 
+  // optional context: triggerEvent (function(event))
 
+  var obs = ObservStruct({
+    shape: Observ([8,8]),
+    loops: Observ([]),
+    targets: Observ([]),
+    loopLength: Observ(8)
+  })
 
+  obs.loopPosition = Observ([0,8])
+  obs.context = context
 
-  var obs = ObservStruct(xtend({
-    node: Observ(), // this is useful for loop-drop-setup :)
-    chunkPositions: ObservVarhash({})
-  }, additionalProperties))
+  obs.onEvent = Event(function(broadcast){
+    obs.triggerEvent = broadcast
+  })
 
-  obs.transforms = ObservArray([])
-
-  var soundChunkLookup = {}
-
-  var undos = []
-  var redos = []
-
-  var baseLoops = {}
-  var currentLoops = {}
-  var releases = obs._releases = []
-
-  releases.push(
-
-    // update playback when transforms change
-    obs.transforms(refreshCurrent)
-
-  )
-
-  obs.chunkState = Observ([])
-  obs.flags = Observ({})
-  obs.triggerIds = Observ([])
-  obs.loopLength = Observ(8)
-
-  obs.grid = computed([obs.chunkPositions, opts.chunkLookup], function(chunkPositions, chunkLookup){
-    var result = Grid([], shape)
-    var flags = Grid([], shape)
-    var triggerIds = []
-    var chunkState = []
-
-    if (chunkPositions){
-      soundChunkLookup = {}
-      Object.keys(chunkPositions).forEach(function(chunkId){
-        var chunk = chunkLookup[chunkId]
-        var origin = chunkPositions[chunkId]
-        if (chunk && origin){
-          chunkState.push({
-            id: chunkId, 
-            origin: origin, 
-            shape: chunk.grid.shape, 
-            stride: chunk.grid.stride, 
-            node: chunk.node,
-            color: chunk.color
-          })
-          result.place(origin[0], origin[1], chunk.grid)
-          for (var k in chunk.flags){
-            if (Array.isArray(chunk.flags[k]) && chunk.flags[k].length){
-              var index = result.data.indexOf(k)
-              if (~index){
-                flags.data[index] = chunk.flags[k]
-              }
-            }
-          }
-          for (var i=0;i<chunk.grid.data.length;i++){
-            if (chunk.grid.data[i] != null){
-              if (!chunk.usedSlots || ~chunk.usedSlots.indexOf(i)){
-                triggerIds.push(chunk.grid.data[i])
-              }
-              soundChunkLookup[chunk.grid.data[i]] = chunk.id
-            }
-          }
-        }
-      })
+  var loopLookup = computed([obs.loops, obs.targets], function(loops, targets){
+    var result = {}
+    var shape = obs.shape()
+    var max = Array.isArray(shape) && shape[0] * shape[1] || 0
+    for (var i=0;i<max;i++){
+      var id = targets[i]
+      var loop = loops[i]
+      if (id && loop){
+        result[id] = loop
+      }
     }
-
-    obs.chunkState.set(chunkState)
-    obs.flags.set(flags)
-    obs.triggerIds.set(triggerIds)
-
     return result
   })
 
-  if (triggerOutput){
-    obs.playing = computedDittyGrid(triggerOutput, obs.grid)
-  }
+  var pendingPlayingUpdate = false
+  var currentlyPlaying = {}
+  var lastPosition = -1
 
-  if (player){
-    obs.active = computedActiveGrid(player, obs.grid)
-  }
+  var removeStopListener = watchEvent(context.scheduler, 'stop', function(){
+    for (var i=globalQueue.length-1;i>=0;i--){
+      var item = globalQueue[i]
+      if (item.event === 'stop'){
+        item.time = context.audio.currentTime
+        globalQueue.splice(i, 1)
+        obs.triggerEvent(item)
+      }
+    }
+  })
 
-  if (scheduler){
-    obs.loopPosition = computedLoopPosition(scheduler, obs.loopLength)
-  }
+  var globalQueue = []
+  var removeScheduleListener = watchEvent(context.scheduler, 'data', function(schedule){
 
-  if (scheduler && triggerOutput){
-    obs.recording = computedRecording(scheduler, triggerOutput, obs.grid, obs.loopLength)
-  }
+    var from = schedule.from
+    var to = schedule.to
+    var time = schedule.time
+    var nextTime = schedule.time + schedule.duration
+    var beatDuration = schedule.beatDuration
+    var loopLength = obs.loopLength() || 8
 
-  if (obs.playing && obs.active && obs.recording){
-
-    // for binding to grid visual interface
-    obs.gridState = computed([
-      obs.grid, obs.playing, obs.active, obs.recording, obs.loopPosition, obs.loopLength, obs.triggerIds
-    ], function computeGridState(grid, playing, active, recording, loopPosition, loopLength, triggerIds){
-      var length = grid.data.length
-      var result = []
-      for (var i=0;i<length;i++){
-        if (grid.data[i]){
-          result[i] = {
-            id: grid.data[i],
-            isPlaying: playing.data[i],
-            isActive: active.data[i],
-            isRecording: recording.data[i],
-            isTrigger: !!~triggerIds.indexOf(grid.data[i])
-          }
+    // schedule queued events
+    for (var i=globalQueue.length-1;i>=0;i--){
+      var item = globalQueue[i]
+      if (to > item.position || shouldSendImmediately(item, loopLookup()[item.id])){
+        if (to > item.position){
+          var delta = (item.position - from) * beatDuration
+          item.time = time + delta
+        } else {
+          item.time = time
+          item.position = from
         }
+        globalQueue.splice(i, 1)
+        obs.triggerEvent(item)
       }
+    }
 
-      return {
-        loopPosition: loopPosition,
-        loopLength: loopLength,
-        grid: Grid(result, grid.shape, grid.stride),
-        chunks: obs.chunkState()
+    var localQueue = []
+    var shape = obs.shape()
+    var max = Array.isArray(shape) && shape[0] * shape[1] || 0
+
+    var loops = obs.loops()
+    var targets = obs.targets()
+
+    // main scheduling
+    for (var i=0;i<max;i++){
+      var id = targets[i]
+      var loop = loops[i]
+      addEventsToQueue(id, loop, time, from, to, beatDuration, localQueue)
+    }
+
+    localQueue.sort(compare)
+
+    // trigger events now, or queue for later
+    for (var i=0;i<localQueue.length;i++){
+      var item = localQueue[i]
+      if (item.time < nextTime){
+        obs.triggerEvent(item)
+      } else {
+        globalQueue.push(item)
       }
-      
-    })
+    }
+    
+    if (Math.floor(schedule.from*10) > Math.floor(lastPosition*10)){
+      var pos = Math.floor(schedule.from*10) % (loopLength*10)
+      obs.loopPosition.set([pos/10, loopLength])
+      lastPosition = schedule.from
+    }
 
+  })
+
+  obs.onEvent(function(event){
+    if (context.triggerEvent){
+      // send events
+      context.triggerEvent(event)
+    }
+
+    // track active
+    if (event.event === 'start'){
+      currentlyPlaying[event.id] = true
+    } else if (event.event === 'stop'){
+      currentlyPlaying[event.id] = false
+    }
+
+    if (!pendingPlayingUpdate){
+      pendingPlayingUpdate = true
+      nextTick(refreshPlaying)
+    }
+
+  })
+
+  function refreshPlaying(){
+    pendingPlayingUpdate = false
+    var playing = []
+    var targets = obs.targets()
+    var shape = obs.shape()
+    var max = Array.isArray(shape) && shape[0] * shape[1] || 0
+    for (var i=0;i<max;i++){
+      if (currentlyPlaying[targets[i]]){
+        playing[i] = currentlyPlaying[targets[i]]
+      }
+    }
+    obs.playing.set(ArrayGrid(playing, shape))
   }
+
+  // state layers
+  obs.grid = computed([obs.targets, obs.shape], ArrayGrid)
+  obs.playing = Observ(ArrayGrid([], obs.shape()))
+  obs.active = computed([obs.loops, obs.shape], function(loops, shape){
+    return ArrayGrid(loops.map(function(loop){
+      return (loop && loop.length && Array.isArray(loop.events) && loop.events.length)
+    }), shape)
+  })
 
   obs.destroy = function(){
-    if (obs.playing) obs.playing.destroy()
-    if (obs.active) obs.active.destroy()
-    if (obs.loopPosition) obs.loopPosition.destroy()
-    if (obs.recording) obs.recording.destroy()
-    releases.forEach(invoke)
-    releases = []
-  }
-
-  // grab loops from recorder for all sounds currently in grid and set loop
-  obs.store = function(length, start){
-
-    // defaults
-    length = length || obs.loopLength()
-    start = start == null && opts.scheduler ? 
-      opts.scheduler.getCurrentPosition() - length : start
-
-    undos.push(baseLoops)
-
-    var snapshot = obs.triggerIds().reduce(function(result, id){
-      result[id] = {
-        events: recorder.getLoop(id, start, length), 
-        length: length
-      }
-      return result
-    }, {})
-    setBase(snapshot)
-  }
-
-  obs.transform = function(func, args){
-    // transform relative to grid
-    var t = {
-      func: func,
-      args: Array.prototype.slice.call(arguments, 1)
-    }
-
-    obs.transforms.push(t)
-
-    return function release(){
-      var index = obs.transforms.indexOf(t)
-      if (~index){
-        obs.transforms.splice(index, 1)
-      }
-    }
-  }
-
-  obs.isTransforming = function(){
-    return !!obs.transforms.getLength()
-  }
-
-  obs.flatten = function(){
-    // flatten transforms
-    undos.push(baseLoops)
-    targetLoops = currentLoops
-    obs.transforms.set([])
-    setBase(targetLoops)
-  }
-
-  obs.undo = function(){
-    var snapshot = undos.pop()
-    if (snapshot){
-      redos.push(baseLoops)
-      setBase(snapshot)
-    }
-  }
-
-  obs.redo = function(){
-    var snapshot = redos.pop()
-    if (snapshot){
-      undos.push(baseLoops)
-      setBase(snapshot)
-    }
+    removeScheduleListener()
+    removeStopListener()
   }
 
   return obs
 
-  
-  // scoped
-  function refreshCurrent(){
-    currentLoops = gridTransform(baseLoops, obs.transforms())
-    obs.triggerIds().forEach(function(id){
-      var channel = currentLoops[id]
-      if (channel && channel.events && channel.events.length){
-        player.set(id, channel.events, channel.length)
-      } else {
-        player.set(id, null)
-      }
-      currentLoops[id] = channel
-    })
-  }
+  //
+}
 
-  function cloneBaseLoop(id){
-    if (baseLoops[id] && baseLoops[id].events){
-      return {
-        events: baseLoops[id].events.concat(),
-        length: baseLoops[id].length
-      }
-    } else {
-      return null 
-    }
-    return baseLoops[id]
-  }
+function shouldSendImmediately(message, loop){
+  return message.event === 'stop' && (!loop || !loop.length)
+}
 
-  function wrapToLookup(result, value, index){
-    var id = obs.grid().data[index]
-    if (id != null){
-      result[id] = value
-    }
-    return result
-  }
+function watchEvent(emitter, event, listener){
+  emitter.on(event, listener)
+  return emitter.removeListener.bind(emitter, event, listener)
+}
 
-  function performTransform(input, f){
-    return f.func.apply(this, [input].concat(f.args||[]))
-  }
+function compare(a,b){
+  return a.time-b.time
+}
 
-  function gridTransform(input, transforms){
-    if (transforms && transforms.length){
-      var soundGrid = obs.grid()
-      var data = soundGrid.data.map(cloneBaseLoop)
-      var playbackGrid = Grid(data, soundGrid.shape, soundGrid.stride)
-
-      // perform transform
-      soundGrid = transforms.reduce(performTransform, playbackGrid)
-
-      // turn back into loop lookup
-      return soundGrid.data.reduce(wrapToLookup, {})
-    } else {
-      return input
-    }
-  }
-
-  function setBase(snapshot){
-    baseLoops = {}
-    obs.triggerIds().forEach(function(id){
-      baseLoops[id] = snapshot[id]
-    })
-    refreshCurrent()
+function getAbsolutePosition(pos, start, length){
+  pos = pos % length
+  var micro = start % length
+  var position = start+pos-micro
+  if (position < start){
+    return position + length
+  } else {
+    return position
   }
 }
 
-function invoke(fn){
-  return fn()
+function addEventsToQueue(id, loop, time, from, to, beatDuration, queue){
+  if (id && loop && Array.isArray(loop.events)){
+    var events = loop.events
+    var loopLength = loop.length
+
+    for (var j=0;j<events.length;j++){
+
+      var event = events[j]
+      var startPosition = getAbsolutePosition(event[0], from, loopLength)
+      var endPosition = startPosition + event[1]
+
+      if (startPosition >= from && startPosition < to){
+
+        var delta = (startPosition - from) * beatDuration
+        var duration = event[1] * beatDuration
+        var startTime = time + delta
+        var endTime = startTime + duration
+        
+        queue.push({
+          id: id,
+          event: 'start',
+          position: startPosition,
+          args: event.slice(4),
+          time: startTime
+        })
+
+        queue.push({
+          id: id,
+          event: 'stop',
+          position: endPosition,
+          args: event.slice(4),
+          time: endTime
+        })
+      }
+    }
+
+  }
 }

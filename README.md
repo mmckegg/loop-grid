@@ -1,15 +1,11 @@
 loop-grid
 ===
 
-Make grid based controllers that trigger events and record loops using [soundbank](https://github.com/mmckegg/soundbank) and [loop-recorder](https://github.com/mmckegg/loop-recorder). Add a bunch of [soundbank-chunk](https://github.com/mmckegg/soundbank-chunk) instances to the grid and position/shape accordingly.
-
-Implements [observ](https://github.com/raynos/observ) for easy data-binding to your views.
-
-For an example of mapping to a midi controller, see [loop-launchpad](https://github.com/mmckegg/loop-launchpad).
+An observable collection of looped event sequences shaped to a grid.
 
 ## Install via [npm](https://npmjs.org/package/loop-grid)
 
-```bash
+```js
 $ npm install loop-grid
 ```
 
@@ -19,147 +15,117 @@ $ npm install loop-grid
 var LoopGrid = require('loop-grid')
 ```
 
-### `LoopGrid(opts, additionalProps)`
+### `var loopGrid = LoopGrid(options)`
+
+Returns an [observable](https://github.com/raynos/observ) instance of LoopGrid.
+
+#### options:
+  - **scheduler**: (required) instance of [Bopper](https://github.com/mmckegg/bopper)
+  - **triggerEvent**: (required) `function(event)` called for every event to be triggered
+  - **audio**: (required) instance of [AudioContext](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext)
+
+### `loopGrid()`
+
+Return the current object descriptor (state).
+
+### `loopGrid.set(descriptor)`
+
+Set the current object descriptor (state).
+
+### `loopGrid.shape` (`Observ([rows, cols])`)
+
+Included in state.
+
+### `loopGrid.loops` (`Observ([ { length: 8, events: [] }, ... ])`)
+
+Included in state.
+
+### `loopGrid.targets` (`Observ([ids])`)
+
+Mapping of grid loops to ids.
+
+Included in state.
+
+### `loopGrid.loopLength` (`Observ(8)`)
+
+Included in state.
+
+### `var removeListener = loopGrid.onEvent(listener)`
+
+### `loopGrid.triggerEvent(event)`
 
 ```js
-var loopGrid = LoopGrid({
-
-  player: player, // instance of ditty
-  recorder: recorder, // instance of loop-recorder
-
-  scheduler: scheduler, // instance of bopper
-  triggerOutput: scheduler, // stream of trigger events (e.g. soundbank-trigger)
-
-  shape: [8, 8], // width, height
-
-  // 
-  chunkLookup: Observ({
-    chunkId: {
-      grid: ArrayGrid([]), // grid mapped IDs
-      flags: {}
-    }
-  })
-
-}, additionalProps)
+var event = { 
+  id: String, 
+  event: 'start' | 'stop', 
+  position: Number, // beat
+  time: Number, // based on 
+  args: Array
+}
 ```
 
-Returns an extended instance of [ObservStruct](https://github.com/raynos/observ-struct).
+### `var value = loopGrid.loopPosition()`
 
-### `loopGrid.store([length, start])`
+### `var removeListener = loopGrid.loopPosition(listener)`
 
-`length` defaults to `loopGrid.loopLength()`.
+### `var arrayGrid = loopGrid.grid()`
 
-`start` defaults to `scheduler.getCurrentPosition() - length`.
+Returns [ArrayGrid](https://github.com/mmckegg/array-grid) based on `loopGrid.targets` and `loopGrid.shape`.
 
-This calls `recorder.getLoop` for every ID currently mapped to this grid and then calls `player.set` for each result. It also creates an `undo()` point.
+### `var removeListener = loopGrid.grid(listener)
 
-### `loopGrid.transform(func[, args...])`
+### `var grid = loopGrid.playing()`
 
-Add a transform function to the loop. `func(input, args...)` is just an ordinary javascript function that receives an instance of [array-grid](https://github.com/mmckegg/array-grid) and must return a modified array-grid in return. The grid contains each loop coordinate mapped.
+Returns ArrayGrid of `true` values where target is currently being triggered.
 
-Returns a function that when called, removes the transform. Transforms can be stacked then ones from the middle of the pile, removed, using this method.
+### `var removeListener = loopGrid.playing(listener)`
 
-```js
-var remove = loopGrid.transform(function(input){
-  var kickLoop = input.get(0,0)
-  input.set(0,1, kickLoop) // override the snare loop with the kick loop
-  return input
-})
-```
+### `var grid = loopGrid.active()`
 
-### `loopGrid.flatten()`
+Returns ArrayGrid of `true` values where target has a current loop.
 
-Flatten the current `transform()` stack and create an undo point.
-
-### `loopGrid.undo()`
-
-### `loopGrid.redo()`
+### `var removeListener = loopGrid.active(listener)`
 
 ### `loopGrid.destroy()`
 
-Clean up any listeners to `recorder` and `player`.
-
-## Attributes
-
-### `loopGrid` (ObservStruct)
-
-Dehydrate (persist):
+## Looper
 
 ```js
-fs.write('grid.json', JSON.stringify(loopGrid()))
+var Looper = require('loop-grid/looper')
 ```
 
-Re-hydrate (restore):
+### `var looper = Looper(loopGrid)`
+
+### `var loops = looper()`
+
+### `var removeListener = looper(listener)`
+
+### `var currentlyRecording = looper.recording()`
+
+### `var removeListener = looper.recording(listener)`
+
+### `looper.store()`
+
+### `looper.flaten()`
+
+### `var releaseTransform = looper.transform(func(input, args..), args)`
+
+Pass in a function to add to transform stack. `input` is an instance of [ArrayGrid](https://github.com/mmckegg/array-grid) and should return either the modified `input` or a new instance of `ArrayGrid`.
+
+### `looper.undo()`
+
+### `looper.redo()`
+
+### `looper.isTransforming()`
+
+## Computed Flags
 
 ```js
-var data = JSON.parse(fs.readFileSync('grid.json', 'utf8'))
-loopGrid.set(data)
+var computeFlags = require('loop-grid/compute-flags')
 ```
 
-### `loopGrid.transforms` (ObservArray)
-
-Updatable / bindable list of active transforms.
-
-### `loopGrid.chunkPositions` (ObservVarhash)
-
-Map chunks (from opts.chunkLookup) to grid positions at specified origin.
-
-### `loopGrid.loopLength` (Observ)
+## Computed Targets
 
 ```js
-loopGrid.chunkPositions.put('drums', [0,0])
-```
-
-## Computed Observables (read-only)
-
-### `loopGrid.grid` (Observ(ArrayGrid))
-
-An instance of array-grid that maps coordinates to the sound IDs of all chunks. Attemps to batch up changes to `nextTick`. If you need to access the grid in the same tick, call `loopGrid.forceRefresh` first.
-
-### `loopGrid.active` (Observ(ArrayGrid))
-
-Observable ArrayGrid containing true values where coords in current loop
-
-### `loopGrid.playing` (Observ(ArrayGrid))
-
-Observable ArrayGrid containing true values where coords is currently being triggered.
-
-### `loopGrid.recording` (Observ(ArrayGrid))
-
-Observable ArrayGrid containing true values where coords has played within range of `loopLength`.
-
-### `loopGrid.loopPosition` (Observ)
-
-### `loopGrid.triggerIds` (Observ)
-
-Get a list of the public IDs of sounds mapped to this grid.
-
-### `loopGrid.gridState` (Observ)
-
-Example output:
-
-```js
-{
-  grid: ArrayGrid([
-    { id: 'drums#0', 
-      isRecording: true, 
-      isPlaying: false, 
-      isActive: false 
-    },
-    { id: 'drums#0', 
-      isRecording: true, 
-      isPlaying: false, 
-      isActive: false 
-    }
-  ], [8,8]),
-  chunks: [
-    {
-      id: 'drums', 
-      origin: [0,0], 
-      shape: [1,4], 
-      node: {..},
-      color: [255, 100, 123]
-    }
-  ]
-}
+var computeTargets = require('loop-grid/compute-targets')
 ```

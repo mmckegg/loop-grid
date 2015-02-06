@@ -1,7 +1,7 @@
 {
   "name": "loop-grid",
   "version": "3.3.1",
-  "description": "Make grid based controllers that trigger events and record loops using soundbank and loop-recorder.",
+  "description": "An observable collection of looped event sequences shaped to a grid.",
   "main": "index.js",
   "scripts": {
     "test": "tape test/*.js"
@@ -11,19 +11,17 @@
     "url": "https://github.com/mmckegg/loop-grid.git"
   },
   "keywords": [
+    "frp",
     "loop",
     "midi",
     "launchpad",
     "monome",
-    "push",
     "observ",
-    "controller",
     "waapi",
     "music",
     "perform",
     "live",
-    "grid",
-    "soundbank"
+    "grid"
   ],
   "author": "Matt McKegg",
   "license": "ISC",
@@ -33,16 +31,14 @@
   "homepage": "https://github.com/mmckegg/loop-grid",
   "dependencies": {
     "array-grid": "^1.1.0",
+    "geval": "^2.1.1",
+    "loop-recorder": "^1.1.0",
     "next-tick": "^0.2.2",
     "observ": "^0.2.0",
     "observ-array": "^3.0.0",
-    "observ-struct": "^5.0.1",
-    "observ-varhash": "^0.2.0",
-    "xtend": "^4.0.0"
+    "observ-struct": "^5.0.1"
   },
   "devDependencies": {
-    "ditty": "*",
-    "loop-recorder": "*",
     "tape": "^2.14.0"
   }
 }
