@@ -1,6 +1,8 @@
 var ArrayGrid = require('array-grid')
 
 var Observ = require('observ')
+var ObservDefault = require('./lib/observ-default')
+
 var ObservStruct = require('observ-struct')
 var Event = require('geval')
 
@@ -17,10 +19,10 @@ function LoopGrid(context){
   // optional context: triggerEvent (function(event))
 
   var obs = ObservStruct({
-    shape: Observ([8,8]),
-    loops: Observ([]),
-    targets: Observ([]),
-    loopLength: Observ(8)
+    shape: ObservDefault([8,8]),
+    loops: ObservDefault([]),
+    targets: ObservDefault([]),
+    loopLength: ObservDefault(8)
   })
 
   obs.loopPosition = Observ([0,8])
