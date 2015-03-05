@@ -14,11 +14,19 @@ module.exports = function computeFlags(obsChunkLookup, obsPositions, obsShape){
           var chunkGrid = chunk.grid()
 
           var result = [] 
-          chunkGrid.data.forEach(function(id, i){
-            if (flags[id]){
-              result[i] = flags[id]
+          if (Array.isArray(flags)){
+            if (flags.length){
+              chunkGrid.data.forEach(function(id, i){
+                result[i] = flags
+              })
             }
-          })
+          } else {
+            chunkGrid.data.forEach(function(id, i){
+              if (flags[id]){
+                result[i] = flags[id]
+              }
+            })
+          }
 
           grid.place(origin[0], origin[1], new ArrayGrid(result, chunkGrid.shape))
         }
