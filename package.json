@@ -36,7 +36,8 @@
     "next-tick": "^0.2.2",
     "observ": "^0.2.0",
     "observ-array": "^3.0.0",
-    "observ-struct": "^5.0.1"
+    "observ-struct": "^5.0.1",
+    "xtend": "^4.0.0"
   },
   "devDependencies": {
     "tape": "^2.14.0"
