@@ -36,6 +36,7 @@
     "next-tick": "^0.2.2",
     "observ": "^0.2.0",
     "observ-array": "^3.0.0",
+    "observ-grid": "^2.10.1",
     "observ-struct": "^5.0.1",
     "xtend": "^4.0.0"
   },
