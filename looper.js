@@ -122,6 +122,7 @@ function Looper(loopGrid){
               var end = swingPosition(event[0] + event[1], ratio, 2)
               return [start, end - start].concat(event.slice(2))
             }),
+            held: loop.held,
             length: loop.length
           }
         }
@@ -133,7 +134,7 @@ function Looper(loopGrid){
 }
 
 function ensureLength (loop, minLength) {
-  if (loop.length >= minLength || loop.held) {
+  if (!loop.length || loop.length >= minLength || loop.held) {
     return loop
   } else {
     
