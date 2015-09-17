@@ -54,7 +54,7 @@ function Holder(transform){
 function hold(input, start, length, indexes){
   var end = start + length
   input.data.forEach(function(loop, i){
-    if (loop && (!indexes || !indexes.length || ~indexes.indexOf(i))){
+    if (loop && (!indexes || !indexes.length || ~indexes.indexOf(i)) && !loop.held) {
       var from = start % loop.length
       var to = end % loop.length
       var events = []

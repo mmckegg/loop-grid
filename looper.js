@@ -49,10 +49,15 @@ function Looper(loopGrid){
   obs.store = function(){
     var length = loopGrid.loopLength() || 8
     var from = context.scheduler.getCurrentPosition() - length
-    var result = loopGrid.targets().map(function(target, i){
-      var events = recorder.getLoop(target, from, length, 0.1)
-      if (events && events.length){
-        return { length: length, events: events }
+    var result = loopGrid.targets().map(function (target, i) {
+      var isHanging = recorder.getHanging(target, from, length)
+      if (isHanging) {
+        return { length: length, events: [], held: true }
+      } else {
+        var events = recorder.getLoop(target, from, length, 0.1)
+        if (events && events.length){
+          return { length: length, events: events }
+        }
       }
     })
 
@@ -128,7 +133,7 @@ function Looper(loopGrid){
 }
 
 function ensureLength (loop, minLength) {
-  if (loop.length >= minLength) {
+  if (loop.length >= minLength || loop.held) {
     return loop
   } else {
     
@@ -153,7 +158,8 @@ function cloneLoop(loop){
   if (loop && Array.isArray(loop.events)){
     return {
       events: loop.events.concat(),
-      length: loop.length
+      length: loop.length,
+      held: loop.held
     }
   }
 }

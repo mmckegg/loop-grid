@@ -26,11 +26,19 @@ function LoopGrid(context){
   })
 
   obs.loopPosition = Observ([0,8])
+  obs.held = Observ([])
   obs.context = context
 
+  var broadcastEvent = null
   obs.onEvent = Event(function(broadcast){
-    obs.triggerEvent = broadcast
+    broadcastEvent = broadcast
   })
+
+  obs.triggerEvent = function (event) {
+    if (!currentlyHeld[event.id]) {
+      broadcastEvent(event)
+    }
+  }
 
   var loopLookup = computed([obs.loops, obs.targets], function(loops, targets){
     var result = {}
@@ -48,6 +56,7 @@ function LoopGrid(context){
 
   var pendingPlayingUpdate = false
   var currentlyPlaying = {}
+  var currentlyHeld = {}
   var lastPosition = -1
 
   var removeStopListener = watchEvent(context.scheduler, 'stop', function(){
@@ -56,7 +65,7 @@ function LoopGrid(context){
       if (item.event === 'stop'){
         item.time = context.audio.currentTime
         globalQueue.splice(i, 1)
-        obs.triggerEvent(item)
+        broadcastEvent(item)
       }
     }
   })
@@ -83,7 +92,7 @@ function LoopGrid(context){
           item.position = from
         }
         globalQueue.splice(i, 1)
-        obs.triggerEvent(item)
+        broadcastEvent(item)
       }
     }
 
@@ -98,7 +107,35 @@ function LoopGrid(context){
     for (var i=0;i<max;i++){
       var id = targets[i]
       var loop = loops[i]
-      addEventsToQueue(id, loop, time, from, to, beatDuration, localQueue)
+
+      if (loop && loop.held) {
+        currentlyHeld[id] = true
+        if (!currentlyPlaying[id]) {
+          broadcastEvent({
+            id: id,
+            event: 'start',
+            position: context.scheduler.getCurrentPosition(),
+            args: [],
+            time: context.audio.currentTime
+          })
+        }
+      } else {
+        if (currentlyHeld[id]) {
+          currentlyHeld[id] = false
+          if (currentlyPlaying[id]) {
+            broadcastEvent({
+              id: id,
+              event: 'stop',
+              position: context.scheduler.getCurrentPosition(),
+              args: [],
+              time: context.audio.currentTime
+            })
+          }
+        }
+
+        // main path
+        addEventsToQueue(id, loop, time, from, to, beatDuration, localQueue)
+      }
     }
 
     localQueue.sort(compare)
@@ -107,7 +144,7 @@ function LoopGrid(context){
     for (var i=0;i<localQueue.length;i++){
       var item = localQueue[i]
       if (item.time < nextTime){
-        obs.triggerEvent(item)
+        broadcastEvent(item)
       } else {
         globalQueue.push(item)
       }

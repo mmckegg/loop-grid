@@ -50,6 +50,9 @@ function suppress(input, indexes){
   input.data.forEach(function(loop, i){
     if (loop && (!indexes || !indexes.length || ~indexes.indexOf(i))){
       loop.events = []
+      if (loop.held) {
+        loop.held = false
+      }
     }
   })
   return input
