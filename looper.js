@@ -12,7 +12,6 @@ module.exports = Looper
 function Looper (loopGrid) {
   var base = Observ([])
   var transforms = ObservArray([])
-
   var undos = []
   var redos = []
 
@@ -21,7 +20,7 @@ function Looper (loopGrid) {
     var swingRatio = 0.5 + (swing * (1 / 6))
     if (transforms.length) {
       var input = ArrayGrid(base.map(cloneLoop), loopGrid.shape())
-      var result = transforms.reduce(performTransform, input)
+      var result = transforms.slice().sort(prioritySort).reduce(performTransform, input)
       return swingLoops(result && result.data || [], swingRatio)
     } else {
       return swingLoops(base, swingRatio)
@@ -88,7 +87,25 @@ function Looper (loopGrid) {
   obs.transform = function (func, args) {
     var t = {
       func: func,
-      args: Array.prototype.slice.call(arguments, 1)
+      args: Array.prototype.slice.call(arguments, 1),
+      priority: 0
+    }
+
+    obs.transforms.push(t)
+
+    return function release () {
+      var index = obs.transforms.indexOf(t)
+      if (~index) {
+        obs.transforms.splice(index, 1)
+      }
+    }
+  }
+
+  obs.transformTop = function (func, args) {
+    var t = {
+      func: func,
+      args: Array.prototype.slice.call(arguments, 1),
+      priority: 1
     }
 
     obs.transforms.push(t)
@@ -187,4 +204,8 @@ function swingPosition (position, center, grid) {
     ? (1 + pos) * center
     : center + pos * (1 - center)
   return (rootPos + posOffset) / grid
+}
+
+function prioritySort (a, b) {
+  return (a && a.priority || 0) - (b && b.priority || 0)
 }
