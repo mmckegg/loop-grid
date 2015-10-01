@@ -4,7 +4,12 @@
   "description": "An observable collection of looped event sequences shaped to a grid.",
   "main": "index.js",
   "scripts": {
-    "test": "tape test/*.js"
+    "test": "snazzy && tape test/*.js"
+  },
+  "standard": {
+    "ignore": [
+      "test/test-*.js"
+    ]
   },
   "repository": {
     "type": "git",
@@ -41,6 +46,7 @@
     "xtend": "^4.0.0"
   },
   "devDependencies": {
+    "snazzy": "^2.0.1",
     "tape": "^2.14.0"
   }
 }

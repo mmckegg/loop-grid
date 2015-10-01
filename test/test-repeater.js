@@ -3,25 +3,24 @@ var Repeater = require('../transforms/repeater')
 var ObservGrid = require('observ-grid')
 var ArrayGrid = require('array-grid')
 
-test(function(t){
-
+test(function (t) {
   var transformedInput = null
-  function transform(func, arg1, arg2){
+  function transform (func, arg1, arg2) {
     var input = fakePlaybackGrid()
     transformedInput = func(input, arg1, arg2)
     t.equal(input, transformedInput)
   }
 
   var repeater = Repeater(transform)
-  var grid = ObservGrid([], [2,2])
+  var grid = ObservGrid([], [2, 2])
 
   repeater.start(grid, 1)
   t.deepEqual(transformedInput, null)
 
-  grid.set(0,0, true)
+  grid.set(0, 0, true)
   t.deepEqual(transformedInput.data, [{events: [[0, 0.5]], length: 1}])
 
-  grid.set(0,1, true)
+  grid.set(0, 1, true)
   t.deepEqual(transformedInput.data, [
     {events: [[0, 0.5]], length: 1},
     {events: [[0, 0.5]], length: 1}
@@ -33,8 +32,7 @@ test(function(t){
     {events: [[0, 1]], length: 2}
   ])
 
-  grid.set(0,0, null)
-
+  grid.set(0, 0, null)
 
   t.deepEqual(transformedInput.data, [
     , {events: [[0, 1]], length: 2}
@@ -44,6 +42,6 @@ test(function(t){
 
 })
 
-function fakePlaybackGrid(){
-  return ArrayGrid([], [2,2])
+function fakePlaybackGrid () {
+  return ArrayGrid([], [2, 2])
 }

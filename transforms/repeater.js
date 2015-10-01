@@ -1,5 +1,4 @@
-module.exports = function(transform){
-
+module.exports = function (transform) {
   var repeater = {}
 
   var release = null
@@ -8,37 +7,36 @@ module.exports = function(transform){
   var activeGrid = null
   var repeatLength = 1
 
-  repeater.setLength = function(value){
+  repeater.setLength = function (value) {
     repeatLength = value
     refresh()
   }
 
-  repeater.getRepeat = function(){
-    if (release){
+  repeater.getRepeat = function () {
+    if (release) {
       return repeatLength
     }
   }
 
-  repeater.start = function(inputGrabber, length){
-    if (!release){
-
-      if (length != null){
+  repeater.start = function (inputGrabber, length) {
+    if (!release) {
+      if (length != null) {
         repeatLength = length
       }
 
-      release = inputGrabber(function(grid){
+      release = inputGrabber(function (grid) {
         activeGrid = grid
         refresh()
       })
 
       refresh()
-    } else if (length != null){
+    } else if (length != null) {
       repeater.setLength(length)
     }
   }
 
-  repeater.stop = function(){
-    if (release){
+  repeater.stop = function () {
+    if (release) {
       release()
       release = null
     }
@@ -46,7 +44,7 @@ module.exports = function(transform){
     refresh()
   }
 
-  function refresh(){
+  function refresh () {
     if (releaseTransform) {
       releaseTransform()
       releaseTransform = null
@@ -54,15 +52,15 @@ module.exports = function(transform){
 
     var active = []
 
-    if (activeGrid){
-      activeGrid.data.forEach(function(val, i){
-        if (val){
+    if (activeGrid) {
+      activeGrid.data.forEach(function (val, i) {
+        if (val) {
           active.push(i)
         }
       })
     }
 
-    if (active.length && repeatLength != null){
+    if (active.length && repeatLength != null) {
       releaseTransform = transform(repeat, active, repeatLength)
     }
   }
@@ -70,17 +68,16 @@ module.exports = function(transform){
   return repeater
 }
 
-function repeat(input, active, length){
-  active.forEach(function(index){
+function repeat (input, active, length) {
+  active.forEach(function (index) {
     if (length === 0) { // suppress
       input.data[index] = null
     } else {
       input.data[index] = {
-        events: [[0, length/2]],
+        events: [[0, length / 2]],
         length: length
       }
     }
-
   })
   return input
 }
