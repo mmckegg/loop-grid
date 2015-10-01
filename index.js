@@ -204,7 +204,11 @@ function LoopGrid (context) {
 }
 
 function shouldSendImmediately (message, loop) {
-  return message.event === 'stop' && (!loop || !loop.length)
+  return message.event === 'stop' && isEmpty(loop)
+}
+
+function isEmpty (loop) {
+  return !loop || (!loop.held && (!loop.events || !loop.events.length))
 }
 
 function watchEvent (emitter, event, listener) {
