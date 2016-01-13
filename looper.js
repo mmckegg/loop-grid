@@ -1,5 +1,6 @@
 var Observ = require('observ')
 var computedNextTick = require('./lib/computed-next-tick')
+var computed = require('observ/computed')
 var LoopRecorder = require('loop-recorder')
 var ObservArray = require('observ-array')
 var ArrayGrid = require('array-grid')
@@ -16,15 +17,19 @@ function Looper (loopGrid) {
   var redos = []
 
   var swing = loopGrid.context.swing || Observ(0)
-  var obs = computedNextTick([base, transforms, swing], function (base, transforms, swing) {
-    var swingRatio = 0.5 + (swing * (1 / 6))
+
+  var transformedOutput = computedNextTick([base, transforms], function (base, transforms) {
     if (transforms.length) {
       var input = ArrayGrid(base.map(cloneLoop), loopGrid.shape())
       var result = transforms.slice().sort(prioritySort).reduce(performTransform, input)
-      return swingLoops(result && result.data || [], swingRatio)
+      return result && result.data || []
     } else {
-      return swingLoops(base, swingRatio)
+      return base
     }
+  })
+
+  var obs = computed([transformedOutput, swing], function (input, swing) {
+    return swingLoops(input, 0.5 + (swing * (1 / 6)))
   })
 
   obs.transforms = transforms
@@ -64,9 +69,9 @@ function Looper (loopGrid) {
   }
 
   obs.flatten = function () {
-    obs.refresh()
+    transformedOutput.refresh()
     undos.push(base())
-    base.set(obs())
+    base.set(transformedOutput())
     transforms.set([])
   }
 
