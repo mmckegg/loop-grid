@@ -1,10 +1,9 @@
 var Observ = require('observ')
 var computedNextTick = require('./lib/computed-next-tick')
 var computed = require('observ/computed')
-var LoopRecorder = require('loop-recorder')
+var Recorder = require('./lib/recorder')
 var ObservArray = require('observ-array')
 var ArrayGrid = require('array-grid')
-var extend = require('xtend')
 
 var computedRecording = require('./lib/recording')
 
@@ -35,32 +34,36 @@ function Looper (loopGrid) {
   obs.transforms = transforms
   obs.recording = computedRecording(loopGrid)
 
-  var recorder = LoopRecorder()
+  var record = Recorder()
   var context = loopGrid.context
+  var lastTruncateAt = 0
 
   // record all output events
   loopGrid.onEvent(function (data) {
     if (swing()) {
       var swingRatio = 0.5 + (swing() * (1 / 6))
-      data = extend(data, {
-        position: unswingPosition(data.position, swingRatio, 2)
-      })
+      record(data.id, unswingPosition(data.position, swingRatio, 2), data.event === 'start')
+    } else {
+      record(data.id, data.position, data.event === 'start')
     }
-    recorder.write(data)
+
+    if (data.position - lastTruncateAt > 16) {
+      lastTruncateAt = data.position
+      record.truncate(data.position - 64)
+    }
   })
 
   obs.store = function () {
     var length = loopGrid.loopLength() || 8
-    var from = context.scheduler.getCurrentPosition() - length
+    var pos = context.scheduler.getCurrentPosition()
+    var from = pos - length
     var result = loopGrid.targets().map(function (target, i) {
-      var isHanging = recorder.getHanging(target, from, length)
-      if (isHanging) {
-        return { length: length, events: [], held: true }
-      } else {
-        var events = recorder.getLoop(target, from, length, 0.1)
-        if (events && events.length) {
-          return { length: length, events: events }
-        }
+      var events = record.getRange(target, from, pos).map(function (data) {
+        return [data[0] % length].concat(data.slice(1))
+      }).sort(byPosition)
+
+      if (events.length && !(events.length === 1 && !events[0][1])) {
+        return { length: length, events: events }
       }
     })
 
@@ -139,11 +142,9 @@ function Looper (loopGrid) {
 
           return {
             events: loop.events.map(function (event) {
-              var start = swingPosition(event[0], ratio, 2)
-              var end = swingPosition(event[0] + event[1], ratio, 2)
-              return [start, end - start].concat(event.slice(2))
+              var at = swingPosition(event[0], ratio, 2)
+              return [at].concat(event.slice(1))
             }),
-            held: loop.held,
             length: loop.length
           }
         }
@@ -155,7 +156,7 @@ function Looper (loopGrid) {
 }
 
 function ensureLength (loop, minLength) {
-  if (!loop.length || loop.length >= minLength || loop.held) {
+  if (!loop.length || loop.length >= minLength) {
     return loop
   } else {
     var result = {
@@ -179,8 +180,7 @@ function cloneLoop (loop) {
   if (loop && Array.isArray(loop.events)) {
     return {
       events: loop.events.concat(),
-      length: loop.length,
-      held: loop.held
+      length: loop.length
     }
   }
 }
@@ -213,4 +213,8 @@ function swingPosition (position, center, grid) {
 
 function prioritySort (a, b) {
   return (a && a.priority || 0) - (b && b.priority || 0)
+}
+
+function byPosition (a, b) {
+  return a[0] - b[0]
 }

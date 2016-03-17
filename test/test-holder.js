@@ -21,38 +21,37 @@ test(function (t) {
   holder.start(0, [])
 
   t.deepEqual(transformedInput.data, [
-    {events: [[0, 0.5]], length: 1}, {events: [], length: 1}
+    {events: [[0, true], [0.5, false]], length: 1}, {events: [ [ 0, true ], [0.5, false] ], length: 1}
   ])
 
   holder.start(2, [])
   t.equal(releaseCalled, 1)
 
   t.deepEqual(transformedInput.data, [
-    {events: [[0, 0.5]], length: 1}, {events: [[0, 0.5]], length: 1}
+    {events: [[0, true], [0.5, false]], length: 1}, {events: [[0, true], [0.9, false]], length: 1}
   ])
 
   holder.setLength(2)
   t.equal(releaseCalled, 2)
   t.deepEqual(transformedInput.data, [
-    {events: [[0, 0.5], [1, 0.4]], length: 2}, {events: [[0, 1], [1, 0.4], [1.5, 1]], length: 2}
+    {events: [[0, true], [0.5, false], [1, true], [1.4, false]], length: 2}, {events: [[0, true], [0.9, false], [1, true], [1.4, false], [1.5, true]], length: 2}
   ])
 
   holder.start(3, [])
   t.equal(releaseCalled, 3)
   t.deepEqual(transformedInput.data, [
-    {events: [[0, 0.5], [1, 0.4]], length: 2}, {events: [[1, 0.4], [1.5, 1]], length: 2}
+    {events: [[0, true], [0.5, false], [1, true], [1.4, false]], length: 2}, {events: [[ 0.5, false ], [1, true], [1.4, false], [1.5, true]], length: 2}
   ])
 
+  holder.setLength(1)
   holder.start(1, [0])
-  t.equal(releaseCalled, 4)
   t.deepEqual(transformedInput.data, [
-    {events: [[0, 0.5], [1, 0.4]], length: 2}, {events: [[2, 1], [3, 0.4], [3.5, 1]], length: 4}
+    {events: [[0, true], [0.4, false]], length: 1}, {events: [ [0.5, false], [2, true], [2.9, false], [3, true], [3.4, false], [3.5, true] ], length: 4}
   ])
 
   holder.setLength(0.2)
-  t.equal(releaseCalled, 5)
   t.deepEqual(transformedInput.data, [
-    {events: [[1 % 0.2, 0.1]], length: 0.2}, {events: [[2, 1], [3, 0.4], [3.5, 1]], length: 4}
+    {events: [[0, true], [ 0.1, null ]], length: 0.2}, {events: [[0.5, false], [2, true], [2.9, false], [3, true], [3.4, false], [3.5, true]], length: 4}
   ])
 
   t.end()
@@ -60,6 +59,6 @@ test(function (t) {
 
 function fakePlaybackGrid () {
   return ArrayGrid([
-    {events: [[0, 0.5], [1, 0.4]], length: 2}, {events: [[2, 1], [3, 0.4], [3.5, 1]], length: 4}
+    {events: [[0, true], [0.5, false], [1, true], [1.4, false]], length: 2}, {events: [[0.5, false], [2, true], [2.9, false], [3, true], [3.4, false], [3.5, true]], length: 4}
   ], [1, 2])
 }

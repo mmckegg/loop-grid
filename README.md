@@ -52,14 +52,12 @@ Included in state.
 
 ### `var removeListener = loopGrid.onEvent(listener)`
 
-### `loopGrid.triggerEvent(event)`
-
 ```js
-var event = { 
-  id: String, 
-  event: 'start' | 'stop', 
+var event = {
+  id: String,
+  event: 'start' | 'stop',
   position: Number, // beat
-  time: Number, // based on 
+  time: Number, // based on
   args: Array
 }
 ```

@@ -1,18 +1,15 @@
-/*eslint-disable no-redeclare */
 var ArrayGrid = require('array-grid')
 var Observ = require('observ')
 var ObservDefault = require('./lib/observ-default')
 var ObservStruct = require('observ-struct')
 var Event = require('geval')
 var computed = require('observ/computed')
-var nextTick = require('next-tick')
+var setImmediate = require('setimmediate2').setImmediate
+var getEvents = require('./lib/get-events')
 
 module.exports = LoopGrid
 
 function LoopGrid (context) {
-  // required context: scheduler (instance of Bopper),
-  // optional context: triggerEvent (function(event))
-
   var obs = ObservStruct({
     shape: ObservDefault([8, 8]),
     loops: ObservDefault([]),
@@ -20,169 +17,10 @@ function LoopGrid (context) {
     loopLength: ObservDefault(8)
   })
 
+  var listen = Listener()
+
   obs.loopPosition = Observ([0, 8])
-  obs.held = Observ([])
   obs.context = context
-
-  var broadcastEvent = null
-  obs.onEvent = Event(function (broadcast) {
-    broadcastEvent = broadcast
-  })
-
-  obs.triggerEvent = function (event) {
-    if (!currentlyHeld[event.id]) {
-      broadcastEvent(event)
-    }
-  }
-
-  var loopLookup = computed([obs.loops, obs.targets], function (loops, targets) {
-    var result = {}
-    var shape = obs.shape()
-    var max = Array.isArray(shape) && shape[0] * shape[1] || 0
-    for (var i = 0; i < max; i++) {
-      var id = targets[i]
-      var loop = loops[i]
-      if (id && loop) {
-        result[id] = loop
-      }
-    }
-    return result
-  })
-
-  var pendingPlayingUpdate = false
-  var currentlyPlaying = {}
-  var currentlyHeld = {}
-  var lastPosition = -1
-
-  var removeStopListener = watchEvent(context.scheduler, 'stop', function () {
-    for (var i = globalQueue.length - 1; i >= 0; i--) {
-      var item = globalQueue[i]
-      if (item.event === 'stop') {
-        item.time = context.audio.currentTime
-        globalQueue.splice(i, 1)
-        broadcastEvent(item)
-      }
-    }
-  })
-
-  var globalQueue = []
-  var removeScheduleListener = watchEvent(context.scheduler, 'data', function (schedule) {
-    var from = schedule.from
-    var to = schedule.to
-    var time = schedule.time
-    var nextTime = schedule.time + schedule.duration
-    var beatDuration = schedule.beatDuration
-    var loopLength = obs.loopLength() || 8
-
-    // schedule queued events
-    for (var i = globalQueue.length - 1; i >= 0; i--) {
-      var item = globalQueue[i]
-      if (to > item.position || shouldSendImmediately(item, loopLookup()[item.id])) {
-        if (to > item.position) {
-          var delta = (item.position - from) * beatDuration
-          item.time = time + delta
-        } else {
-          item.time = time
-          item.position = from
-        }
-        globalQueue.splice(i, 1)
-        broadcastEvent(item)
-      }
-    }
-
-    var localQueue = []
-    var shape = obs.shape()
-    var max = Array.isArray(shape) && shape[0] * shape[1] || 0
-
-    var loops = obs.loops()
-    var targets = obs.targets()
-
-    // main scheduling
-    for (var i = 0; i < max; i++) {
-      var id = targets[i]
-      var loop = loops[i]
-
-      if (loop && loop.held) {
-        currentlyHeld[id] = true
-        if (!currentlyPlaying[id]) {
-          broadcastEvent({
-            id: id,
-            event: 'start',
-            position: context.scheduler.getCurrentPosition(),
-            args: [],
-            time: context.audio.currentTime
-          })
-        }
-      } else {
-        if (currentlyHeld[id]) {
-          currentlyHeld[id] = false
-          if (currentlyPlaying[id]) {
-            broadcastEvent({
-              id: id,
-              event: 'stop',
-              position: context.scheduler.getCurrentPosition(),
-              args: [],
-              time: context.audio.currentTime
-            })
-          }
-        }
-
-        // main path
-        addEventsToQueue(id, loop, time, from, to, beatDuration, localQueue)
-      }
-    }
-
-    localQueue.sort(compare)
-
-    // trigger events now, or queue for later
-    for (var i = 0; i < localQueue.length; i++) {
-      var item = localQueue[i]
-      if (item.time < nextTime) {
-        broadcastEvent(item)
-      } else {
-        globalQueue.push(item)
-      }
-    }
-
-    if (Math.floor(schedule.from * 10) > Math.floor(lastPosition * 10)) {
-      var pos = Math.floor(schedule.from * 10) % (loopLength * 10)
-      obs.loopPosition.set([pos / 10, loopLength])
-      lastPosition = schedule.from
-    }
-  })
-
-  obs.onEvent(function (event) {
-    if (context.triggerEvent) {
-      // send events
-      context.triggerEvent(event)
-    }
-
-    // track active
-    if (event.event === 'start') {
-      currentlyPlaying[event.id] = true
-    } else if (event.event === 'stop') {
-      currentlyPlaying[event.id] = false
-    }
-
-    if (!pendingPlayingUpdate) {
-      pendingPlayingUpdate = true
-      nextTick(refreshPlaying)
-    }
-  })
-
-  function refreshPlaying () {
-    pendingPlayingUpdate = false
-    var playing = []
-    var targets = obs.targets()
-    var shape = obs.shape()
-    var max = Array.isArray(shape) && shape[0] * shape[1] || 0
-    for (var i = 0; i < max; i++) {
-      if (currentlyPlaying[targets[i]]) {
-        playing[i] = currentlyPlaying[targets[i]]
-      }
-    }
-    obs.playing.set(ArrayGrid(playing, shape))
-  }
 
   // state layers
   obs.grid = computed([obs.targets, obs.shape], ArrayGrid)
@@ -193,76 +31,143 @@ function LoopGrid (context) {
     }), shape)
   })
 
+  var current = {}
+  var currentlyPlaying = {}
+  var overriding = {}
+  var pendingPlayingUpdate = false
+  var lastPosition = -1
+
+  obs.onEvent = Event(function (broadcast) {
+    obs.triggerEvent = broadcast
+
+    obs.triggerEvent = function (event) {
+      if (event.event === 'start') {
+        overriding[event.id] = true
+      } else {
+        overriding[event.id] = false
+      }
+
+      if (!current[event.id]) {
+        broadcast(event)
+      }
+    }
+
+    listen(context.scheduler.onSchedule, function (schedule) {
+      var targets = obs.targets()
+      targets.forEach(function (id, index) {
+        var loop = obs.loops()[index]
+        getEvents(loop, schedule.from, schedule.to, 0.5).forEach(function (event) {
+          if (current[id] !== event[1] && !(!current[id] && !event[1])) {
+            var delta = (event[0] - schedule.from) * schedule.beatDuration
+            current[id] = event[1]
+            if (!overriding[id]) {
+              broadcast({
+                id: id,
+                event: event[1] ? 'start' : 'stop',
+                position: event[0],
+                time: schedule.time + delta
+              })
+            }
+          }
+        })
+      })
+
+      // stop any notes that are no longer targets
+      Object.keys(current).forEach(function (id) {
+        if (!~targets.indexOf(id)) {
+          delete current[id]
+          if (current[id]) {
+            broadcast({
+              id: id,
+              event: 'stop',
+              position: schedule.from,
+              time: schedule.time
+            })
+          }
+        }
+      })
+
+      // update playback position
+      if (Math.floor(schedule.from * 10) > Math.floor(lastPosition * 10)) {
+        var loopLength = obs.loopLength() || 8
+        var pos = Math.floor(schedule.from * 10) % (loopLength * 10)
+        obs.loopPosition.set([pos / 10, loopLength])
+        lastPosition = schedule.from
+      }
+    })
+
+    listen.event(context.scheduler, 'stop', function () {
+      Object.keys(current).forEach(function (id) {
+        delete current[id]
+        if (current[id]) {
+          broadcast({
+            id: id,
+            event: 'stop',
+            position: context.scheduler.getCurrentPosition(),
+            time: context.audio.currentTime
+          })
+        }
+      })
+    })
+  })
+
+  obs.onEvent(function (event) {
+    if (context.triggerEvent) {
+      // send events
+      context.triggerEvent(event)
+    }
+
+    if (event.event === 'start') {
+      currentlyPlaying[event.id] = true
+    } else if (event.event === 'stop') {
+      currentlyPlaying[event.id] = false
+    }
+
+    if (!pendingPlayingUpdate) {
+      pendingPlayingUpdate = true
+      setImmediate(refreshPlaying)
+    }
+  })
+
   obs.destroy = function () {
-    removeScheduleListener()
-    removeStopListener()
+    listen.releaseAll()
   }
 
   return obs
+  // scoped
 
-//
-}
-
-function shouldSendImmediately (message, loop) {
-  return message.event === 'stop' && isEmpty(loop)
-}
-
-function isEmpty (loop) {
-  return !loop || (!loop.held && (!loop.events || !loop.events.length))
-}
-
-function watchEvent (emitter, event, listener) {
-  emitter.on(event, listener)
-  return emitter.removeListener.bind(emitter, event, listener)
-}
-
-function compare (a, b) {
-  return a.time - b.time
-}
-
-function getAbsolutePosition (pos, start, length) {
-  pos = pos % length
-  var micro = start % length
-  var position = start + pos - micro
-  if (position < start) {
-    return position + length
-  } else {
-    return position
-  }
-}
-
-function addEventsToQueue (id, loop, time, from, to, beatDuration, queue) {
-  if (id && loop && Array.isArray(loop.events)) {
-    var events = loop.events
-    var loopLength = loop.length
-
-    for (var i = 0; i < events.length; i++) {
-      var event = events[i]
-      var startPosition = getAbsolutePosition(event[0], from, loopLength)
-      var endPosition = startPosition + event[1]
-
-      if (startPosition >= from && startPosition < to) {
-        var delta = (startPosition - from) * beatDuration
-        var duration = event[1] * beatDuration
-        var startTime = time + delta
-        var endTime = startTime + duration
-
-        queue.push({
-          id: id,
-          event: 'start',
-          position: startPosition,
-          args: event.slice(4),
-          time: startTime
-        })
-
-        queue.push({
-          id: id,
-          event: 'stop',
-          position: endPosition,
-          args: event.slice(4),
-          time: endTime
-        })
+  function refreshPlaying () {
+    pendingPlayingUpdate = false
+    var playing = []
+    var targets = obs.targets()
+    var shape = obs.shape()
+    var max = Array.isArray(shape) && shape[0] * shape[1] || 0
+    for (var i = 0; i < max; i++) {
+      if (currentlyPlaying[targets[i]]) {
+        playing[i] = true
       }
     }
+    obs.playing.set(ArrayGrid(playing, shape))
   }
+}
+
+function Listener () {
+  var releases = []
+
+  function listen (target, listener) {
+    releases.push(target(listener))
+  }
+
+  listen.event = function (emitter, event, listener) {
+    emitter.on(event, listener)
+    releases.push(emitter.removeListener.bind(emitter, event, listener))
+  }
+
+  listen.releaseAll = function () {
+    while (releases.length) {
+      releases.pop()()
+    }
+  }
+
+  return listen
 }

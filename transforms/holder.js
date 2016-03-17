@@ -1,3 +1,5 @@
+var getEvents = require('../lib/get-events')
+
 module.exports = Holder
 
 function Holder (transform) {
@@ -54,20 +56,17 @@ function Holder (transform) {
 function hold (input, start, length, indexes) {
   var end = start + length
   input.data.forEach(function (loop, i) {
-    if (loop && (!indexes || !indexes.length || ~indexes.indexOf(i)) && !loop.held) {
-      var from = start % loop.length
-      var to = end % loop.length
-      var events = []
+    if (loop && (!indexes || !indexes.length || ~indexes.indexOf(i))) {
+      var events = getEvents(loop, start, end, 0.5)
 
-      loop.events.forEach(function (event) {
-        if (inRange(from, to, event[0])) {
-          event = event.concat()
-          event[0] = event[0] % length
-          event[1] = Math.min(event[1], length / 2)
-          events.push(event)
-        }
-      })
+      if (events.length === 1 && events[0][1]) {
+        var time = round10(events[0][0] + (length / 2))
+        events.push([time, null])
+      }
 
+      events = events.map(function (data) {
+        return [mod(data[0], length)].concat(data.slice(1))
+      }).sort(byPosition)
       input.data[i] = {
         events: events,
         length: length
@@ -77,10 +76,14 @@ function hold (input, start, length, indexes) {
   return input
 }
 
-function inRange (from, to, value) {
-  if (to > from) {
-    return value >= from && value < to
-  } else {
-    return value >= from || value < to
-  }
+function byPosition (a, b) {
+  return a[0] - b[0]
+}
+
+function round10 (value) {
+  return Math.round(value * 10000000000) / 10000000000
+}
+
+function mod (v, n) {
+  return round10((v * 100) % (n * 100)) / 100
 }

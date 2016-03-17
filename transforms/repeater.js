@@ -74,7 +74,7 @@ function repeat (input, active, length) {
       input.data[index] = null
     } else {
       input.data[index] = {
-        events: [[0, length / 2]],
+        events: [[0, true], [length / 2, false]],
         length: length
       }
     }

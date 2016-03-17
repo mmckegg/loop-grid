@@ -28,23 +28,23 @@ test(function (t) {
 
   grid.set(1, 1, true)
   t.deepEqual(transformedInput.data, [
-    null, {events: [[2, 1]], length: 3},,
-    null, {events: [[0, 1]], length: 2},,
-    , {events: [[1, 1]], length: 4}
+    null, {events: [[2, true], [2.9, false]], length: 3},,
+    null, {events: [[0, true], [1, false]], length: 2},,
+    , {events: [[1, true], [2, false]], length: 4}
   ])
 
   grid.set(1, 2, true)
   t.deepEqual(transformedInput.data, [
-    null, {events: [[2, 1]], length: 3},,
-    null, {events: [[0, 1]], length: 2}, {events: [[0, 1]], length: 2},
-    , {events: [[1, 1]], length: 4}, {events: [[1, 1]], length: 4}
+    null, {events: [[2, true], [2.9, false]], length: 3},,
+    null, {events: [[0, true], [1, false]], length: 2}, {events: [[0, true], [1, false]], length: 2},
+    , {events: [[1, true], [2, false]], length: 4}, {events: [[1, true], [2, false]], length: 4}
   ])
 
   grid.set(1, 1, null)
   t.deepEqual(transformedInput.data, [
-    null, {events: [[2, 1]], length: 3},,
-    null, , {events: [[0, 1]], length: 2},
-    , , {events: [[1, 1]], length: 4}
+    null, {events: [[2, true], [2.9, false]], length: 3},,
+    null, , {events: [[0, true], [1, false]], length: 2},
+    , , {events: [[1, true], [2, false]], length: 4}
   ])
 
   t.equal(releaseCalled, 2)
@@ -59,7 +59,7 @@ test(function (t) {
 
 function fakePlaybackGrid () {
   return ArrayGrid([
-    {events: [[0, 1]], length: 2}, {events: [[2, 1]], length: 3},,
-    {events: [[1, 1]], length: 4}
+    {events: [[0, true], [1, false]], length: 2}, {events: [[2, true], [2.9, false]], length: 3},,
+    {events: [[1, true], [2, false]], length: 4}
   ], [3, 3])
 }

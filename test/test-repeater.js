@@ -18,24 +18,24 @@ test(function (t) {
   t.deepEqual(transformedInput, null)
 
   grid.set(0, 0, true)
-  t.deepEqual(transformedInput.data, [{events: [[0, 0.5]], length: 1}])
+  t.deepEqual(transformedInput.data, [{events: [[0, true], [0.5, false]], length: 1}])
 
   grid.set(0, 1, true)
   t.deepEqual(transformedInput.data, [
-    {events: [[0, 0.5]], length: 1},
-    {events: [[0, 0.5]], length: 1}
+    {events: [[0, true], [0.5, false]], length: 1},
+    {events: [[0, true], [0.5, false]], length: 1}
   ])
 
   repeater.setLength(2)
   t.deepEqual(transformedInput.data, [
-    {events: [[0, 1]], length: 2},
-    {events: [[0, 1]], length: 2}
+    {events: [[0, true], [1, false]], length: 2},
+    {events: [[0, true], [1, false]], length: 2}
   ])
 
   grid.set(0, 0, null)
 
   t.deepEqual(transformedInput.data, [
-    , {events: [[0, 1]], length: 2}
+    , {events: [[0, true], [1, false]], length: 2}
   ])
 
   t.end()
