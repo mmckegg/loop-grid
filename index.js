@@ -41,14 +41,16 @@ function LoopGrid (context) {
     obs.triggerEvent = broadcast
 
     obs.triggerEvent = function (event) {
-      if (event.event === 'start') {
-        overriding[event.id] = true
-      } else {
-        overriding[event.id] = false
-      }
+      if (event.id) {
+        if (event.event === 'start') {
+          overriding[event.id] = true
+        } else {
+          overriding[event.id] = false
+        }
 
-      if (!current[event.id]) {
-        broadcast(event)
+        if (!current[event.id]) {
+          broadcast(event)
+        }
       }
     }
 
