@@ -29,7 +29,7 @@
     "grid"
   ],
   "author": "Matt McKegg",
-  "license": "ISC",
+  "license": "AGPL-3.0",
   "bugs": {
     "url": "https://github.com/mmckegg/loop-grid/issues"
   },

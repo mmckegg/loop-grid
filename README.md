@@ -246,3 +246,7 @@ Calls `transform` with a function that suppresses all `indexes` specified.
 ### `suppressor.stop()`
 
 Release suppression `transform`.
+
+## License
+
+[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)
