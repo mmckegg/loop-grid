@@ -40,12 +40,14 @@ function Looper (loopGrid) {
 
   // record all output events
   loopGrid.onEvent(function (data) {
+    var position = data.position
+
     if (swing()) {
       var swingRatio = 0.5 + (swing() * (1 / 6))
-      record(data.id, unswingPosition(data.position, swingRatio, 2), data.event === 'start')
-    } else {
-      record(data.id, data.position, data.event === 'start')
+      position = unswingPosition(data.position, swingRatio, 2)
     }
+
+    record(data.id, position, data.event === 'start')
 
     if (data.position - lastTruncateAt > 16) {
       lastTruncateAt = data.position
