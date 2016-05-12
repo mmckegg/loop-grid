@@ -73,13 +73,6 @@ function LoopGrid (context) {
 
       pushHistory.trimFrom(id, schedule.from)
 
-      // broadcast({
-      //   id: id,
-      //   event: 'cancel',
-      //   position: schedule.from,
-      //   time: schedule.time
-      // })
-
       var index = obs.targets().indexOf(id)
       if (~index) {
         var loop = obs.loops()[index]
@@ -139,7 +132,8 @@ function LoopGrid (context) {
     })
 
     function scheduleRange (id, loop, schedule) {
-      getEvents(loop, schedule.from, schedule.to, 0.5).forEach(function (event) {
+      var events = getEvents(loop, schedule.from, schedule.to, 1)
+      events.forEach(function (event) {
         var current = pushHistory.getValueAt(id, event[0])
         if (current !== event[1] || (!event[1] && schedule.rescheduling)) {
           var delta = (event[0] - schedule.from) * schedule.beatDuration
@@ -182,7 +176,7 @@ function LoopGrid (context) {
 
   // scoped
   function scheduleDisplay (id, loop, schedule) {
-    getEvents(loop, schedule.from, schedule.to, 0.5).forEach(function (event) {
+    getEvents(loop, schedule.from, schedule.to, 1).forEach(function (event) {
       if (!overriding[id]) {
         currentlyPlaying[id] = event[1]
         refreshPlaying()
