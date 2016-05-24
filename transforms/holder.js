@@ -59,9 +59,13 @@ function hold (input, start, length, indexes) {
     if (loop && (loop.events.length > 1) && (!indexes || !indexes.length || ~indexes.indexOf(i))) {
       var events = getEvents(loop, start, end, 0.5)
 
-      if (events.length === 1 && events[0][1]) {
-        var time = round10(events[0][0] + (length / 2))
-        events.push([time, null])
+      if (events.every(isOff)) {
+        events = []
+      } else {
+        if (events.length === 1) {
+          var time = round10(events[0][0] + (length / 2))
+          events.push([time, null])
+        }
       }
 
       events = events.map(function (data) {
@@ -86,4 +90,8 @@ function round10 (value) {
 
 function mod (v, n) {
   return round10((v * 100) % (n * 100)) / 100
+}
+
+function isOff (event) {
+  return !event[1]
 }
