@@ -59,7 +59,7 @@ function LoopGrid (context) {
       targets.forEach(function (id, index) {
         var loop = obs.loops()[index]
         getEvents(loop, schedule.from, schedule.to, 0.5).forEach(function (event) {
-          if (current[id] !== event[1] && !(!current[id] && !event[1])) {
+          if (id && current[id] !== event[1] && !(!current[id] && !event[1])) {
             var delta = (event[0] - schedule.from) * schedule.beatDuration
             current[id] = event[1]
             if (!overriding[id]) {
