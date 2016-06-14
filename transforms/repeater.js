@@ -6,6 +6,7 @@ module.exports = function (transform) {
 
   var activeGrid = null
   var repeatLength = 1
+  var offset = 0
 
   repeater.setLength = function (value) {
     repeatLength = value
@@ -18,7 +19,8 @@ module.exports = function (transform) {
     }
   }
 
-  repeater.start = function (inputGrabber, length) {
+  repeater.start = function (inputGrabber, length, offbeat) {
+    offset = offbeat ? length / 2 : 0
     if (!release) {
       if (length != null) {
         repeatLength = length
@@ -61,20 +63,20 @@ module.exports = function (transform) {
     }
 
     if (active.length && repeatLength != null) {
-      releaseTransform = transform(repeat, active, repeatLength)
+      releaseTransform = transform(repeat, active, repeatLength, offset)
     }
   }
 
   return repeater
 }
 
-function repeat (input, active, length) {
+function repeat (input, active, length, offset) {
   active.forEach(function (index) {
     if (length === 0) { // suppress
       input.data[index] = null
     } else {
       input.data[index] = {
-        events: [[0, true], [length / 2, false]],
+        events: [[0 + offset, true], [length / 2 + offset, false]],
         length: length
       }
     }
